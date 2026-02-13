@@ -2,93 +2,89 @@
 
 ## Intro and audience
 
-Lisa governs where Ralph wanders. Lisa is a chaperone to Ralph and peers. Lisa promotes good engineering practices.
+Lisa governs where Ralph wanders, a chaperone to Ralph and peers.
 
-A significant number of engineers are already applying sound engineering discipline to their agentic workflows — scoping context carefully, managing test loops deliberately, and treating agent-assisted development as a complicated domain that requires structured practices. They are not the audience for this Lisa project and are unlikely to recognize their own workflow in the problems described here.
+Lisa promotes good engineering practices. Many engineers are already applying sound discipline to their agentic workflows and won't find themselved in what follows.  
 
-This is written for the population that isn't there yet. Developers and teams who have experienced the productivity promise of coding agents on simple tasks and are now facing challenges on real projects without a clear path forward.
+This is for the population that isn't there yet. Developers and teams who have experienced the productivity promise of coding agents on simple tasks and are now facing challenges on real projects without a clear path forward.
+
+## Problem statement
+
+The main problem is coding agents running verification loops that consume disproportionate amounts of tokens and developer time. This inefficiency stems from:
+
+**Indiscriminate Test Execution** Without targeted execution strategies, agents default to running full test suites and simulating heavy UI environments. This forces the model to process noisy, unrelated failures, leading to hallucinated dependencies and expensive, unnecessary context loading.
+
+**Poorly Constrained Scope** Despite story descriptions and criteria, agents lack a boundary model. They treat accessibility as permission. Resulting into a PR that violates the original story boundary.
+
+This is the agent equivalent of `SELECT *`. It technically works, but it signals a missing mental model for what's actually happening under the hood.
 
 
-## Problem Statement
+### The underlying problem is mental model mismatches.
 
-Coding agents running test loops are consuming disproportionate amounts of tokens and developer time.
+#### Risk 1: Complexity mis-classification
 
-Without explicit strategy, agents default to broad, indiscriminate test execution: loading full test suites into context on every run, chasing unrelated failures, simulating UI interactions in noisy virtual environments, and making sweeping code changes in response to failures that have nothing to do with the work at hand. The result is a feedback loop that is expensive, slow, and often counterproductive.
+Much of the evidence that coding agents are impressive comes from influencers demoing one-page web apps. The demos are real. Agents genuinely do well on simple, self-contained problems. The disease, to borrow Jobs' framing on Scully, is assuming that a great demonstration is 90% of the solution. In practice it's closer to single digits. The rest is execution discipline, and execution discipline on a real project looks nothing like a demo.
 
-This is the agent equivalent of `SELECT *` — technically it works, but it signals a missing mental model for what's actually happening under the hood.
+Dave Snowden's Cynefin framework makes this precise. The jump from *simple* to *complicated* to *complex* domains is not a linear increase in difficulty. It is a categorical shift in what kinds of solutions work. Practices that are correct for simple problems are actively harmful when applied to complicated ones. The vast majority of agent workflows being promoted today are designed for simple domains and mis-applied to complicated and complex ones. Real projects are rarely simple.
 
+The practical result: most of the time saved on initial agent-assisted development gets consumed, and often exceeded, by extended debugging and refactoring cycles that follow directly from under-engineered context discipline.
 
-### The underlying problem is the risk of mental model mismatches.
-
-**Risk 1: Complexity mis-classification**
-
-Much evidence that coding agents are transformative comes from influencers demoing one-page web apps. The demos are real. Agents *are* genuinely impressive on simple, self-contained problems. The disease, to borrow Jobs' framing on Scully, is assuming that a great demonstration is 90% of the solution. In practice it's closer to single digits. The rest is execution discipline, and execution discipline on a real project looks nothing like a demo.
-
-Dave Snowden's Cynefin framework makes this precise. The jump from *simple* to *complicated* to *complex* domains is not a linear increase in difficulty — it's a categorical shift in what kinds of solutions work. Practices that are correct for simple problems are actively harmful when applied to complicated ones. The vast majority of agent workflows being promoted today are designed for simple domains and mis-applied to complicated and complex ones. Real projects are rarely simple.
-
-The practical consequence: most of the time saved on initial agent-assisted development gets consumed, and  often exceeded, by extended debugging and refactoring cycles that result directly from under-engineered context discipline.
-
-**Risk 2: Compound context decay**
+#### Risk 2: Compound context decay
 
 Even when developers correctly recognize they're working in a complicated domain, the second failure mode is underestimating how context degrades across agent turns.
 
-Three forces combine:
+Three forces combine.
 
-*Small errors accumulate.* An agent operating with a slightly incorrect assumption in turn 3 will build on that assumption in turns 4, 5, and 6. Each subsequent turn is correct relative to the flawed premise. By turn 15 the agent is confidently solving a coherent but subtly wrong problem, and no single turn looks obviously broken.
+**Small errors accumulate.** An agent operating with a slightly incorrect assumption in turn 3 will build on that assumption in turns 4, 5, and 6. Each subsequent turn is correct relative to the flawed premise. By turn 15 the agent is confidently solving a coherent but subtly wrong problem, and no single turn looks obviously broken.
 
-*Scope drift goes undetected.* Without explicit constraints, agents naturally expand scope in response to what they find — a failing test here, a related refactor opportunity there. Each expansion is locally reasonable. Cumulatively they pull the agent away from the original problem. The test loop validates the expanded scope, not the story.
+**Scope drift goes undetected.** Without explicit constraints, agents naturally expand scope in response to what they find. A failing test here, a related refactor opportunity there. Each expansion is locally reasonable. Cumulatively they pull the agent away from the original problem. The test loop validates the expanded scope, not the story.
 
-*Lossy context compaction degrades silently.* When a context window fills, the agent compresses earlier turns to make room. That compression is always lossy. Constraints get softened. Edge cases that were established early get dropped. Nuance evaporates. The agent's internal model of the problem decays without any visible signal that it has done so. The agent doesn't know it has forgotten something. It just proceeds with less.
-
-These three forces multiply. The causal chain is direct:
+**Lossy context compaction degrades silently.** When a context window fills, the agent compresses earlier turns to make room. That compression is always lossy. Constraints get softened. Edge cases established early get dropped. Nuance evaporates. The agent's internal model of the problem decays without any visible signal. It doesn't know it has forgotten something. It just proceeds with less.
 
 > *Mis-classify the complexity → under-engineer the context discipline → decay compounds unchecked → agent confidently solves the wrong problem at increasing cost*
 
-LISA is a response to both stages. Layered tests and selective scope address complexity mis-classification by imposing appropriate discipline for a complicated domain. Isolated incubation and asking for expansion interrupt compound context decay by containing failures at the right layer before they can propagate into a widening context.
+LISA is a response to both risks. Layered tests and selective scope address complexity mis-classification by imposing appropriate discipline for a complicated domain. Isolated incubation and asking for expansion interrupt compound context decay by containing failures at the right layer before they can propagate into a widening context.
 
 
 ---
 
-## Who Is Affected
+## Who is affected
 
-**Developers using coding agents** in scenarios where:
+Developers using coding agents in scenarios where:
 
-- Multiple stories are being developed in parallel or in rapid succession -  context bleeds between stories. Agents carry assumptions from the last story into the next without knowing they're doing it.
-- Backend/frontend via REST API — contract mismatches between layers are silent until integration. Agents fix one side without seeing the other.
-- A data product runs on a managed platform with external dependencies - Pplatform errors look like code errors. Agents chase the wrong cause, burning context on noise they can't resolve.
-- Historically mounting tech debt is depriortized for more scope - agents amplify existing fragility. What was a manageable crack becomes a compounding fault line under agentic velocity.
+- Multiple stories are being developed in parallel or in rapid succession, and context bleeds between them. Agents carry assumptions from the last story into the next without knowing they're doing it.
 
-Tech leads, agentic in-the-loop or humans on-the-loop, inherit the consequences in the form of longer PR cycles, noisier test output, and agents that have made changes outside the story scope.
+- Backend and frontend communicate via REST API, and contract mismatches between layers are silent until integration. Agents fix one side without seeing the other.
 
----
+- A data product runs on a managed platform with external dependencies. Platform errors look like code errors. Agents chase the wrong cause, burning context on noise they can't resolve.
 
-## Current State and Alternatives
+- Historically mounting tech debt is deprioritized for more scope. Agents amplify existing fragility. What was a manageable crack becomes a compounding fault line under agentic velocity.
 
-Several agentic frameworks and skill sets include testing guidance. The issue is one of resolution and durability.
-
-Many existing strategies operate at the principle level: *"use TDD," "write tests before code," "ensure coverage before merging."* These are correct but abstract. They give the agent a posture, not a decision tree. Under pressure, a failing test, an unexpected dependency, a noisy virtual environment, the agent falls back on what it does by default, for example:
-- Run the entire test suite on every change
-- Load all related (and unrelated) source files into context to analyze failures
-- Attempt to simulate user actions in virtual environments, which are often unstable and generate high-noise output
-- Investigate and attempt to fix failures outside the scope of the current story
-- Re-run full suites after each attempted fix, compounding token consumption
-
-
-The principle doesn't survive contact with a complicated real-world context.
-
-This isn't purely a framework design issue. It reflects how language models handle long contexts. Instructions stated early in a session — in a system prompt, a role definition, or an initial briefing — carry weight at the start. That weight diminishes relative to recent context as the session progresses.
-
-The practical consequence is that even well-intentioned agentic frameworks see their test strategies erode mid-session. The agent isn't ignoring the instruction — it's operating in a context where more recent and more concrete signals have effectively displaced it.
-
-LISA is an attempt to establish a prompt-based test strategy pattern for coding agents at the story, release, or refactor level.
+Tech leads, whether agentic in-the-loop or humans on-the-loop, inherit the consequences in the form of longer PR cycles, noisier test output, and agents that have made changes outside the story scope.
 
 ---
 
-## Value Hypothesis
+## Current state and alternatives
 
-**The value hypothesis is that token consumption and cycle time can be reduced ay least 40% per story cycle, and potentially 70%+ on stories where the agent would otherwise spiral into tangent investigation — with no reduction in defect detection effectiveness.**
+Several agentic frameworks and skill sets include testing guidance. The issue is resolution and durability.
 
-The savings come from three primary sources:
+Many existing strategies operate at the principle level: "use TDD," "write tests before code," "ensure coverage before merging." These are correct but abstract. They give the agent a posture, not a decision tree. Under pressure (a failing test, an unexpected dependency, a noisy virtual environment) the agent falls back on what it does by default (re: problems described above)
+
+The principle doesn't survive contact with a complicated real-world context. This isn't purely a framework design issue. It reflects how language models handle long contexts. Instructions stated early in a session, in a system prompt or an initial briefing, carry weight at the start. That weight diminishes relative to recent context as the session progresses.
+
+Even well-intentioned agentic frameworks see their test strategies erode mid-session. The agent isn't ignoring the instruction. It's operating in a context where more recent and more concrete signals have displaced it.
+
+LISA is an attempt to establish robust verification strategy patterns for coding agents at the story, release, or refactor level.
+
+---
+
+## Value hypothesis
+
+The value hypothesis is that ** token consumption and cycle time can be reduced at least 40% per story cycle**, and potentially 70%+ on stories where the agent would otherwise spiral into tangent investigation, with no reduction in defect detection effectiveness.
+
+### Solution Hypotheses
+
+The savings come from three sources:
 
 **1. Tangent Spiral Tax**
 When an agent encounters an unrelated test failure it will load additional context, attempt fixes, potentially create new failures, load more context to analyze those, and so on. A single tangent can cost as much as 3–4 normal story test cycles in tokens alone. LISA eliminates this by explicitly deferring out-of-scope failures rather than pursuing them.
@@ -103,66 +99,54 @@ LISA defers UI simulation in Round 1 (story level) entirely, replacing it with a
 
 The layering principle is durable. The specific round where simulation becomes appropriate is not fixed and should be revisited as tooling evolves.
 
-What won't change: running UI simulation before unit and API layers are confirmed clean will always be wasteful regardless of how capable the simulator becomes. The hierarchy is about isolating failure root cause efficiently, not about model capability.
-
-The underlying principle is that UI simulation should only run when the layers beneath it are confirmed.
-
-The release test cycle shows more modest savings — roughly 25–40% — since it is already more intentional, but eliminating redundant re-testing of story-level functionality and deferring UI verification still compounds meaningfully across a release.
+What won't change: running UI simulation before unit and API layers are confirmed clean will always be wasteful regardless of how capable the simulator becomes.
 
 ---
 
-## Core Tenets
+## Core tenets
 
 These hierarchy tenets are about isolating failure root cause efficiently, not about model capability.
 
-**Layered tests including eval tests**
-Tests run in layers: unit tests first, then API tests, then a developer-verified manual check. Eval tests — agent-specific validation — are a first-class layer, not an afterthought. You don't proceed to the next layer until the current layer passes.
+**Layered tests including eval tests.** Tests run in layers: unit tests first, then API tests, then a developer-verified manual check. Eval tests (agent-specific validation) are a first-class layer, not an afterthought. You don't proceed to the next layer until the current layer passes.
 
-**Isolated incubation**
-Failures are contained at the layer where they are found. The agent fixes at that layer and does not escalate outward until the current layer is clean. This prevents a unit-level bug from triggering a cascade of API and integration test failures that obscure the actual problem.
+**Isolated incubation.** Failures are contained at the layer where they are found. The agent fixes at that layer and does not escalate outward until the current layer is clean. This prevents a unit-level bug from triggering a cascade of API and integration test failures that obscure the actual problem.
 
-The layering principle is durable. However layers will need to adjust e.g. the specific round where simulation becomes appropriate should be revisited as tooling evolves.
+The layering principle is durable. However, layers will need to adjust. For example, the specific round where simulation becomes appropriate should be revisited as tooling evolves.
 
-**Selective scope**
-Test execution is always scoped to the story's modified code and its direct dependencies. Out-of-scope failures are noted and deferred. The agent does not have permission to wander.
+**Selective scope.** Test execution is always scoped to the story's modified code and its direct dependencies. Out-of-scope failures are noted and deferred. The agent does not have permission to wander.
 
-**Ask for expansion**
-The agent works within its confirmed layer and defers outward expansion to a human decision. For story-level work this means requesting developer verification before moving to UI. For release-level work this means providing a clear manual test checklist rather than attempting automated E2E simulation.
+**Ask for expansion.** The agent works within its confirmed layer and defers outward expansion to a human decision. For story-level work this means requesting developer verification before moving to UI. For release-level work this means providing a clear manual test checklist rather than attempting automated E2E simulation.
 
-**Non-goals**
-LISA is not a replacement for a full regression suite. It does not eliminate the need for broader test coverage on major refactors or large-scope releases
-.
+###Non-goals
+
+LISA is not a replacement for a full regression suite. It does not eliminate the need for broader test coverage on major refactors or large-scope releases.
+
 LISA is not a permanent argument against UI automation. The deferral of UI simulation at the story level reflects current signal-to-noise realities in virtual environments, not a categorical position. As virtual environment stability improves, as computer use agents mature, and as models get better at interpreting UI test output, the appropriate round for introducing UI simulation will shift earlier.
 
 ---
 
-## Vision and Future State
+## Vision and future state
 
-LISA is framed as a deployable skill that can operate in two modes:
+LISA is a deployable skill that can operate in two modes:
 
-**Standalone** — LISA governs the test loop for a project where no prior test strategy exists.
+**Standalone** - LISA governs the test loop for a project where no prior verification strategies exists.
 
-**Ralph chaperone** — LISA is layered on top of an existing agent configuration that runs unconstrained (a RALPH loop), constraining its test behavior without replacing its other capabilities.
+**Ralph chaperone** -  LISA is paired with existing agent configuration constraining its verification behavior without replacing its other capabilities.
 
 *Lisa governs where Ralph wanders.*
 
-The longer-term vision is for LISA to become a reusable, version-controlled prompt skill that lives in the repository alongside the code it governs. This means:
-
-- Test strategy is explicit, documented, and consistent across the team
-- New developers onboard to the discipline immediately
-- The strategy evolves with the codebase through normal version control workflows
-- Story-level, release-level, and refactor-level strategies are distinct prompts with clear handoff points between them
+The longer-term vision is for LISA to become a prompt skill that lives in the repository alongside the code it governs. Test strategy becomes explicit, documented, and consistent across the team. New developers onboard to the discipline immediately. The strategy evolves with the codebase. Story-level, release-level, and refactor-level strategies are distinct prompts with clear handoff points between them.
 
 As coding agents become more deeply embedded in development workflows, token efficiency and context discipline will move from nice-to-have to a core engineering competency. LISA is a starting point for building that muscle.
 
-The RALPH loop will still exist, improve and likely flourish. There are ample legitimate moments for it.  *"Did you run a RALPH?"* should become,a code review flag.
+The RALPH loop will improve, and likely flourish. There are ample strong use cases for it. For now "Did you run a RALPH?" should become a code review flag.
 
-**A note on economics**
+**Token economics**
 
 Token unit costs have trended down and competition makes a price reversal unlikely in the near term. The economic argument for efficiency discipline doesn't depend on that changing.
 
-The real driver is volume. As agents become embedded in daily development workflows, token consumption scales multiplicativel. A sloppy loop on one story is a rounding error. A sloppy loop across a team, across every story, across every sprint is a meaningful cost center regardless of unit price.
+The real driver is volume. As agents become embedded in daily development workflows, token consumption scales multiplicatively. A sloppy loop on one story is a rounding error. A sloppy loop across a team, across every story, across every sprint is a meaningful cost center regardless of unit price.
 
-The wildcard is energy. Data center power demand is already outpacing grid capacity in most major markets. There are credible arguments that power becomes a hard ceiling on compute supply within this decade. Most current assumptions about inference cost trajectories are off. Efficiency discipline adopted now is a hedge against that scenario, not just a present-day optimization.
+A 3rd horizon wildcard in token costs is energy. Data center power demand is already outpacing grid capacity in most major markets. There are credible arguments that power becomes a hard ceiling on compute supply within this decade. Most current assumptions about inference cost trajectories are off. Efficiency discipline adopted now is a hedge against that scenario, not just a present-day optimization.
 
-*Build the discipline while it's optional. It may not stay that way.*
+As Lisa might say: *"Build the discipline while it's optional. It may not stay that way.""*
