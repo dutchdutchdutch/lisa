@@ -70,7 +70,7 @@ Selected to strictly adhere to the **Phase 1 "Drop-in Install" Requirement**. Av
 
 ```bash
 mkdir -p .lisa/hooks scripts/lisa
-touch .lisa/config.yaml
+touch .lisa/config.json
 # Core logic will be plain Python3 + Bash
 ```
 
@@ -110,8 +110,8 @@ touch .lisa/config.yaml
 ### Configuration & Customization
 *   **Decision:** Hierarchical Configuration.
 *   **Pattern:**
-    1.  Load `~/.lisa/config.yaml` (User Defaults).
-    2.  Merge with `./.lisa/config.yaml` (Project Overrides).
+    1.  Load `~/.lisa/config.json` (User Defaults).
+    2.  Merge with `./.lisa/config.json` (Project Overrides).
 *   **Rationale:** Allows users to set global preferences (e.g., "Always Spike Mode") while respecting project strictness.
 
 ### Infrastructure & Deployment
@@ -123,7 +123,7 @@ touch .lisa/config.yaml
 
 **Implementation Sequence:**
 1.  **State Store:** Implement `StateManager` class (Python) to read/write JSON with locking.
-2.  **Config Loader:** Implement `ConfigLoader` class (Python) to merge YAMLs.
+2.  **Config Loader:** Implement `ConfigManager` class (Python) to merge JSONs.
 3.  **The Hook:** Implement `lisa.sh` to trap git/shell events and call Python.
 
 **Cross-Component Dependencies:**
@@ -171,18 +171,21 @@ touch .lisa/config.yaml
 ```text
 /
 ├── .lisa/                      # Hidden runtime directory (User Space)
-│   ├── config.yaml             # Project-specific overrides
+│   ├── config.json             # Project-specific overrides
 │   ├── state.json              # Task state (The Brain's Memory)
 │   └── hooks/                  # Git hooks directory (symlinked to from .git/hooks)
 │       └── pre-commit          # The specific hook entry point
 ├── scripts/
 │   └── lisa/                   # The Core Logic (Repo Space - Committed)
-│       ├── lisa.sh             # The "Exec" Wrapper & Entry Point
 │       ├── main.py             # Python Entry Point
-│       ├── config/             # Config Loader Module
-│       ├── state/              # State Manager Module
+│       ├── config.py           # Config Manager Module
+│       ├── state.py            # State Manager Module
 │       ├── commands/           # Command Logic (commit, run, spike)
-│       └── tests/              # Unit Tests (unittest)
+│       └── __init__.py         # Package Marker
+├── tests/                      # Unit Tests (unittest)
+├── .agent/
+│   └── test-artifacts/         # Verification Scripts/Artifacts
+├── lisa.sh                     # The "Exec" Wrapper & Entry Point
 └── .git/
     └── hooks/
         └── pre-commit -> ../../.lisa/hooks/pre-commit  # Symlink Integration
@@ -196,7 +199,7 @@ touch .lisa/config.yaml
 
 **Component Boundaries:**
 *   **State Interface:** `StateManager` class abstracts all JSON file I/O.
-*   **Config Interface:** `ConfigLoader` class abstracts hierarchical merging.
+*   **Config Interface:** `ConfigManager` class abstracts hierarchical merging.
 
 **Data Boundaries:**
 *   **State Data:** Confined to `.lisa/state.json`.
@@ -211,7 +214,7 @@ touch .lisa/config.yaml
 
 **Cross-Cutting Concerns:**
 *   **Observability:** `[LISA]` prefix handling in `main.py`.
-*   **Configuration:** `scripts/lisa/config/` module.
+*   **Configuration:** `scripts/lisa/config.py` module.
 
 ## Architecture Validation Results
 

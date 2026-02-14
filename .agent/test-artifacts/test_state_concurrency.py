@@ -3,7 +3,7 @@ import os
 import time
 import sys
 # Add scripts to path so we can import lisa
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../scripts")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../scripts")))
 
 from lisa.state import StateManager
 

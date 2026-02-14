@@ -62,7 +62,7 @@ FR11: Epic 1 - Drop-in install
 
 ### Epic 1: The Walking Skeleton (Local Enforcement)
 A developer can install LISA and have it enforce the "Red-Green-Refactor" loop locally, blocking premature code.
-### Story 1.1: Project Initialization & Install
+### Story 1.1: Project Initialization & Install [DONE]
 
 As a Developer,
 I want to install LISA by copying a script directory,
@@ -76,7 +76,7 @@ So that I can start using it without complex package managers.
 **And** `lisa.sh` is executable
 **And** running `lisa.sh version` returns `0.1.0`
 
-### Story 1.2: State Management (The Brain)
+### Story 1.2: State Management (The Brain) [DONE]
 
 As a LISA System,
 I want to persist the current task state in a file,
@@ -90,7 +90,7 @@ So that I can track the Red-Green cycle across independent shell commands.
 **And** the task status (RED/GREEN) is persisted
 **And** the lock is released immediately after write
 
-### Story 1.3: Configuration Loading
+### Story 1.3: Configuration Loading [DONE]
 
 As a User,
 I want to configure LISA via YAML files,
@@ -117,6 +117,19 @@ So that developers are forced to write tests first (or at least simultaneously).
 **Then** LISA checks if any test files were modified
 **And** if NO tests changed, the commit is blocked (Red Gate)
 **And** if tests changed, the commit is allowed (Green Gate)
+
+### Story 1.5: Documentation & Architecture Update
+
+As a Tech Lead,
+I want the project documentation to reflect the delivered features,
+So that the system remains maintainable and understandable.
+
+**Acceptance Criteria:**
+
+**Given** Epic 1 features are implemented
+**When** I review the `README.md` and `architecture.md`
+**Then** they utilize the latest file structure and configuration formats
+**And** installation instructions are accurate for the current version
 
 ### Epic 2: The Safety Valve (Spike Mode)
 A developer can explicitly bypass rules to prototype without fighting the tool.
@@ -158,6 +171,19 @@ So that I don't confuse unverified output with clean TDD output.
 **When** any LISA command is run
 **Then** the output is prefixed with `[SPIKE]` or `[DIRTY]`
 **And** the standard `[LISA]` prefix is modified to reflect the mode
+
+### Story 2.4: Documentation & Architecture Update
+
+As a Tech Lead,
+I want the project documentation to reflect the delivered features,
+So that the system remains maintainable and understandable.
+
+**Acceptance Criteria:**
+
+**Given** Epic 2 features are implemented
+**When** I review the `README.md` and `architecture.md`
+**Then** they utilize the latest file structure and configuration formats
+**And** installation instructions are accurate for the current version
 
 ### Epic 3: Context Governance (The Governor)
 A developer receives proactive alerts when context window health degrades.
@@ -215,6 +241,19 @@ So that I don't lose the "lessons learned" from a spiral.
 **When** I run `lisa reset`
 **Then** the current state and logs are copied to `.lisa/archive/{timestamp}/`
 **And** the main `.lisa/state.json` is cleared to a fresh state
+
+### Story 3.5: Documentation & Architecture Update
+
+As a Tech Lead,
+I want the project documentation to reflect the delivered features,
+So that the system remains maintainable and understandable.
+
+**Acceptance Criteria:**
+
+**Given** Epic 3 features are implemented
+**When** I review the `README.md` and `architecture.md`
+**Then** they utilize the latest file structure and configuration formats
+**And** installation instructions are accurate for the current version
 
 <!-- Repeat for each epic in epics_list (N = 1, 2, 3...) -->
 
