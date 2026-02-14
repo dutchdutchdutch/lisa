@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+.lisa/state.json
+.lisa/state.json.lock
+.lisa/state.json.tmp
+.lisa/archive/

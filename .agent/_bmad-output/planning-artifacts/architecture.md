@@ -45,33 +45,34 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 ## Starter Template Evaluation
 
 ### Primary Technology Domain
-**CLI Tool / Shell Hook** based on project requirements analysis.
+**Agentic Skill + Support CLI** based on project requirements analysis.
 
 ### Starter Options Considered
 
-1.  **Modern Python CLI (Typer/Click):**
-    *   *Pros:* Type hints, auto-help generation, rich ecosystem.
-    *   *Cons:* Requires `pip install` and venv management, violating "Drop-in" requirement.
+1.  **Pure Prompt:**
+    *   *Pros:* Zero code.
+    *   *Cons:* Agents "drift" and ignore soft constraints under pressure.
 
-2.  **Bash Frameworks (Bashly):**
-    *   *Pros:* Structured bash generation.
-    *   *Cons:* Ruby dependency for generation, added complexity.
+2.  **Heavy Framework:**
+    *   *Pros:* Total control.
+    *   *Cons:* High friction, complex install.
 
-3.  **The "Walking Skeleton" (Custom Zero-Dep):**
-    *   *Pros:* Zero external dependencies. Uses standard `argparse` and `sys`. Fits "Drop-in" requirement perfectly.
-    *   *Cons:* More manual boilerplate code.
+3.  **Skill-First with Tool Enforcers (Selected):**
+    *   *Pros:* Uses the agent's native reasoning (Skill) for the majority of the workflow. Uses minimal atomic scripts (Tools) only where hardware verification or state constraints are strictly required (e.g., "Prove the test failed").
+    *   *Rationale:* Facilitates Evaluation Driven Development (EDD). We define the behavior in the Skill. If the model fails to adhere, we introduce a Script/Tool to enforce it.
 
-### Selected Starter: The Walking Skeleton (Custom)
+### Selected Architecture: Skill + Enforcer Tools
 
-**Rationale for Selection:**
-Selected to strictly adhere to the **Phase 1 "Drop-in Install" Requirement**. Avoiding external dependencies (pip/npm) is critical for adoption friction reduction.
+**Definition:**
+*   **The Brain (Skill):** A markdown definition (`.agent/skills/tdd-gate/skill.md`) that instructs the agent on the Red-Green-Refactor loop.
+*   **The Muscle (CLI):** A lightweight Python CLI (`lisa`) providing atomic tools that the Skill *requires* the agent to call (e.g., `lisa verify-fail`).
 
 **Initialization Command:**
 
 ```bash
-mkdir -p .lisa/hooks scripts/lisa
-touch .lisa/config.json
-# Core logic will be plain Python3 + Bash
+mkdir -p .lisa/hooks scripts/lisa .agent/skills/tdd-gate
+touch .lisa/config.json .agent/skills/tdd-gate/skill.md
+# Core logic: Skill Markdown + Python Tools
 ```
 
 **Architectural Decisions Provided by Starter:**
@@ -117,7 +118,7 @@ touch .lisa/config.json
 ### Infrastructure & Deployment
 *   **Decision:** Repo-based Distribution (Phase 1).
 *   **Pattern:** Scripts committed to `scripts/lisa`.
-*   **Rationale:** "Walking Skeleton" approach. No external package manager required.
+*   **Rationale:** "Walking Skeleton" approach. External dependencies (like `pytest`) are permitted where they add significant value over standard library, provided they are documented.
 
 ### Decision Impact Analysis
 

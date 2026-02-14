@@ -104,21 +104,61 @@ So that I can set global preferences and project-specific overrides.
 **And** merges the project config on top (Project overrides User)
 **And** defaults are used if no config exists
 
-### Story 1.4: The TDD Gate (The Hook)
+### Story 1.4: The TDD Audit (Automated Verification)
 
 As a Tech Lead,
-I want LISA to block commits that contain code changes without test changes,
-So that developers are forced to write tests first (or at least simultaneously).
+I want the system to automatically enforce the "Red-Green" state transitions,
+So that I know TDD was followed without having to manually gate every step.
 
 **Acceptance Criteria:**
 
-**Given** I am in a non-SPIKE mode
-**When** I try to commit code changes
-**Then** LISA checks if any test files were modified
-**And** if NO tests changed, the commit is blocked (Red Gate)
-**And** if tests changed, the commit is allowed (Green Gate)
+Criteria 1: Red State Enforcement (Automated)
+**Given** a new test has been written
+**When** the agent runs `lisa verify-fail <test_file>`
+**Then** the tool runs the test execution
+**And** IF the test FAILS (Exit Code != 0) -> Returns SUCCESS (0) and logs "RED State Verified"
+**And** IF the test PASSES (Exit Code 0) -> Returns FAILURE (1) and logs "Error: Test Passed unexpectedly"
+**And** NO user input is required by default.
 
-### Story 1.5: Documentation & Architecture Update
+Criteria 2: Interactive Mode (Optional)
+**Given** the user explicitly wants to check the test
+**When** the agent runs `lisa verify-fail <test_file> --interactive`
+**Then** the tool pauses for user confirmation before running the automated check.
+
+Criteria 3: Green State Verification
+**Given** implementation is done
+**When** the agent runs `lisa verify-pass <test_file>`
+**Then** the tool runs the test and asserts it PASSES (Exit Code 0).
+
+Criteria 3: Green State Verification
+**Given** the implementation phase is complete
+**When** the system runs verification
+**Then** the specific test verified in Criteria 1 MUST pass
+**And** if it fails, the system provides feedback and loops back to implementation.
+
+
+
+### Story 1.5: Story: Local Regression Verification & Refactoring
+As a Tech Lead,
+I want LISA to enforce a "Direct Dependency" verification loop and Refactoring phase,
+So that the agent confirms the new implementation hasn't regressed related logic and code quality is maintained.
+
+Acceptance Criteria (The "Gherkin")
+
+Criteria 1: The Refactor Phase
+**Given** the new story-specific tests have reached a "Pass" state (Green)
+**When** the agent identifies code smells (duplication, complexity) or optimization opportunities
+**Then** the agent MUST refactor the code to improve quality without changing behavior
+**And** MUST verify that the tests still pass (Green) after every refactor step.
+
+Criteria 2: Validating the Impact Zone
+**Given** the Refactor phase is complete and tests are Green
+**When** the agent identifies tests for directly related modules and dependencies.
+**Then** the agent MUST present this "Impact Suite" to the Human Partner for approval before execution.
+**And** the Human Partner may hold execution or prune the suite if the scope triggers unnecessary "Context Import Tariffs".
+**And** if failures occur in these approved tests, the agent MUST prioritize fixing the implementation code rather than mutating the tests to fit the new behavior.
+
+### Story 1.6: Documentation & Architecture Update
 
 As a Tech Lead,
 I want the project documentation to reflect the delivered features,

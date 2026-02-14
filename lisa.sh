@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -eo pipefail
 
 # LISA - Layered Isolated Scoped Agent
 # The Context Governance Tool
@@ -15,23 +15,20 @@ show_help() {
     echo "  help      Show this help message"
 }
 
-version() {
-    echo "$VERSION"
-}
+# Check for Python 3
+if ! command -v python3 &> /dev/null; then
+    echo "[LISA] Warning: python3 is not installed or not in PATH."
+    echo "[LISA] Skipping context governance checks (Fail-Open)."
+    exit 0
+fi
 
-# Main command dispatcher
-COMMAND="${1:-help}"
+# Get the absolute path of the directory containing this script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR"
 
-case "$COMMAND" in
-    version)
-        version
-        ;;
-    help)
-        show_help
-        ;;
-    *)
-        echo "Unknown command: $COMMAND"
-        show_help
-        exit 1
-        ;;
-esac
+# Set PYTHONPATH to include the current directory so we can run scripts.lisa
+export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
+
+# Exec Handover: Replace current process with Python interpreter
+# We use -m scripts.lisa to run the package entry point (__main__.py)
+exec python3 -m scripts.lisa "$@"
