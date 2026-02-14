@@ -1,0 +1,46 @@
+import json
+import os
+import sys
+
+class ConfigManager:
+    # Default configuration
+    _DEFAULTS = {
+        "strictness": "strict",
+        "spike_mode_allowed": True,
+        "context_limit": 8000
+    }
+
+    def __init__(self, user_config_path=None, project_config_path=None):
+        self.user_config_path = user_config_path or os.path.expanduser("~/.lisa/config.json")
+        self.project_config_path = project_config_path or os.path.abspath("./.lisa/config.json")
+        self._config = self.load()
+
+    def _load_json_safe(self, path):
+        """Loads JSON from a file, returns empty dict on failure."""
+        if not os.path.exists(path):
+            return {}
+        try:
+            with open(path, "r") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            # NFR3: Warn and proceed
+            print(f"[LISA] [WARNING] Failed to load config from {path}: {e}", file=sys.stderr)
+            return {}
+
+    def load(self):
+        """Loads and merges configuration: Defaults < User < Project."""
+        config = self._DEFAULTS.copy()
+        
+        # Load User Config
+        user_config = self._load_json_safe(self.user_config_path)
+        config.update(user_config)
+        
+        # Load Project Config
+        project_config = self._load_json_safe(self.project_config_path)
+        config.update(project_config)
+        
+        return config
+
+    def get(self, key, default=None):
+        """Retrieves a configuration value."""
+        return self._config.get(key, default)
