@@ -1,5 +1,5 @@
 import sys
-from .commands import verify_fail, verify_pass
+from .commands import verify_fail, verify_pass, analyze_deps, enable_spike, disable_spike, bypass_tdd, check_context
 from .config import ConfigManager
 
 def main():
@@ -16,6 +16,16 @@ def main():
         sys.exit(verify_fail(args))
     elif command == "verify-pass":
         sys.exit(verify_pass(args))
+    elif command == "analyze":
+        sys.exit(analyze_deps(args))
+    elif command == "spike":
+        sys.exit(enable_spike(args))
+    elif command == "normal":
+        sys.exit(disable_spike(args))
+    elif command == "bypass-tdd":
+        sys.exit(bypass_tdd(args))
+    elif command == "context":
+        sys.exit(check_context(args))
     elif command == "version":
         print("0.1.0") 
     else:

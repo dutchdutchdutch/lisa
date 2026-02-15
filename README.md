@@ -4,13 +4,14 @@ LISA is a context governance tool for AI-assisted development. It enforces a Red
 
 ## Installation
 
-LISA is designed as a zero-dependency drop-in tool.
-
 1.  Copy `lisa.sh` to your project root.
-2.  Copy the `scripts/lisa` directory to `scripts/lisa`.
-3.  Ensure you have Python 3.8+ installed (Standard Library only).
+2.  Copy `scripts/lisa` to `scripts/lisa`.
+
+For detailed installation instructions, see the [User Guide](docs/user_guide.md#installation).
 
 ## Usage
+
+**For detailed command usage, please refer to the [User Guide](docs/user_guide.md).**
 
 Run LISA commands via the shell wrapper:
 
@@ -18,23 +19,25 @@ Run LISA commands via the shell wrapper:
 ./lisa.sh [command]
 ```
 
+## Modules & Skills
+
+LISA is built on a set of core skills that enforce development best practices.
+
+### `tdd-gate`
+Enforces the **Red-Green-Refactor** cycle. The TDD Gate prevents implementation code from being written until a failing test (Red State) has been verified.
+
+### `refactor-gate`
+Ensures code quality and regression testing explicitly during the Refactor phase, preventing regressions in existing functionality.
+
+### `refactor-gate`
+Enforces code quality and regression testing explicitly during the Refactor phase, preventing regressions in existing functionality.
+
+### Spike Mode & Bypasses
+LISA supports "Spike Mode" (`lisa spike`) and "TDD Bypass" (`lisa bypass-tdd`) to temporarily disengage safety harnesses for prototyping or non-functional work.
+
 ## Configuration
 
-LISA uses a hierarchical configuration system. Settings are loaded in the following order (last one wins):
-
-1.  **Defaults**: Internal hardcoded defaults.
-2.  **User Config**: `~/.lisa/config.json` (Global user preferences).
-3.  **Project Config**: `./.lisa/config.json` (Project-specific overrides).
-
-### Example Configuration (`config.json`)
-
-```json
-{
-  "strictness": "strict",
-  "spike_mode_allowed": true,
-  "context_limit": 8000
-}
-```
+LISA supports hierarchical configuration (User > Project). See the [User Guide](docs/user_guide.md#configuration) for details.
 
 ## State Management
 

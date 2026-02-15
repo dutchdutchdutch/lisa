@@ -21,6 +21,15 @@ You are bound by the **Iron Law**:
 
 You must follow this cycle strictly. Do not deviate.
 
+### 0. Check State
+Before starting, check the current mode in `.lisa/state.json`.
+-   **IF** `mode` is `SPIKE` or `BYPASS_TDD`:
+    -   **SKIP** the verification steps below.
+    -   Proceed directly to implementation.
+    -   Tag all output with `[SPIKE]` or `[BYPASS]`.
+-   **IF** `mode` is `NORMAL` (or missing):
+    -   **PROCEED** to Step 1 (RED).
+
 ### 1. RED: Write & Verify Failure
 **Goal:** Create a minimal test that fails for the *right reason*.
 
@@ -32,6 +41,7 @@ You must follow this cycle strictly. Do not deviate.
         ```
     *   **Verify Tool Output:**
         *   If output contains `[SUCCESS] RED State Verified` -> **PROCEED.**
+        *   If output contains `[SPIKE]` or `[BYPASS]` -> **PROCEED.**
         *   If output contains `[ERROR] Test Passed!` -> **STOP.** You failed to write a failing test. Fix it.
     *   **Interactive Mode (Optional):** If you are unsure, use `lisa verify-fail <file> --interactive` to ask the human.
 
@@ -51,10 +61,16 @@ You must follow this cycle strictly. Do not deviate.
 
 *Note: Refactoring and Regression Verification are handled in the subsequent phase (Story 1.5).*
 
+## Non-Functional Changes
+If the task is purely non-functional (e.g., documentation, formatting):
+1.  Run `lisa bypass-tdd`.
+2.  Proceed with changes.
+3.  Run `lisa normal` when finished.
+
 ## Verification Checklist
 Before marking a task complete, verify:
-- [ ] Every new function/method has a test.
-- [ ] You ran `lisa verify-fail` and received human confirmation.
+- [ ] Every new function/method has a test (unless in Spike/Bypass mode).
+- [ ] You ran `lisa verify-fail` and received confirmation (or Spike skip).
 - [ ] You ran `lisa verify-pass` and it succeeded.
 - [ ] You did not mock meaningful logic unless absolutely necessary.
 
@@ -62,10 +78,11 @@ Before marking a task complete, verify:
 
 | Scenario | Action |
 | :--- | :--- |
-| **"Too simple to test"** | Simple code breaks. Test takes 30 seconds. Do it. |
-| **"I already manually tested"** | Ad-hoc ≠ systematic. Write the test. |
-| **"Existing code has no tests"** | You are improving it. Add tests for the existing code first. |
-| **"Test matches implementation, not requirement"** | Delete test. Write test based on *intent* (product brief/story), not code. |
+| **"Minor or very simple change** | Unless this is a text change, write the test, the butterfly effect is real |
+| **"I already manually tested"** | Write the test. |
+| **"Existing code has no tests"** | Add tests for the existing code first before refactor or improvement |
+| **"Test matches implementation, not requirement"** | Delete test. Write test based on story, bug, or feature, not code. |
+| **"Non-functional change"** | Run `lisa bypass-tdd`. |
 
 ## Emergency Bypass
 If you truly believe TDD is impossible for a specific task (e.g., pure configuration, throwaway prototype), you must **ASK THE HUMAN** for permission to skip.

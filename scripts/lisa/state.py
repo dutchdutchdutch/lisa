@@ -1,8 +1,14 @@
 import json
+import sys
 import os
 import fcntl
 import time
 from contextlib import contextmanager
+
+class LISA_MODES:
+    NORMAL = "NORMAL"
+    SPIKE = "SPIKE"
+    BYPASS_TDD = "BYPASS_TDD"
 
 class StateManager:
     def __init__(self, state_file=".lisa/state.json"):
@@ -15,7 +21,7 @@ class StateManager:
         return {
             "taskId": "none",
             "status": "GREEN",
-            "mode": "NORMAL",
+            "mode": LISA_MODES.NORMAL,
             "lastUpdated": time.time()
         }
 
@@ -32,12 +38,20 @@ class StateManager:
         if lock_dir:
             os.makedirs(lock_dir, exist_ok=True)
             
-        with open(self.lock_file, "w") as f:
+        try:
+            f = open(self.lock_file, "w")
             try:
                 fcntl.flock(f, fcntl.LOCK_EX)
                 yield
             finally:
                 fcntl.flock(f, fcntl.LOCK_UN)
+                f.close()
+        except (PermissionError, OSError) as e:
+            # NFR3: Fail-Open
+            # If we can't lock, we proceed without locking.
+            # We warn on stderr so it doesn't break JSON output parsing if any.
+            sys.stderr.write(f"[LISA] [WARNING] Could not acquire lock on {self.lock_file}: {e}\n")
+            yield
 
     def _load_internal(self):
         """Internal load without locking."""

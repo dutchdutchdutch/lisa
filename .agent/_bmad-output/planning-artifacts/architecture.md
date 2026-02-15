@@ -145,8 +145,14 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
     {
       "current_task": "task-123",
       "status": "RED",
+      "mode": "NORMAL",
       "last_run": "2023-10-27T10:00:00Z"
     }
+    ```
+*   **Modes:**
+    *   `NORMAL`: Strict TDD Enforcement.
+    *   `SPIKE`: Safety Harness Disengaged (No verification).
+    *   `BYPASS_TDD`: Single-task bypass for non-functional changes.
     ```
 *   **Locking:** `state.json.lock` must be acquired before writing.
 
@@ -181,7 +187,10 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 │       ├── main.py             # Python Entry Point
 │       ├── config.py           # Config Manager Module
 │       ├── state.py            # State Manager Module
-│       ├── commands/           # Command Logic (commit, run, spike)
+│       ├── commands.py         # Command Logic
+│       ├── runner.py           # Test Runner
+│       ├── analysis.py         # Dependency Analysis
+│       ├── utils.py            # Utilities
 │       └── __init__.py         # Package Marker
 ├── tests/                      # Unit Tests (unittest)
 ├── .agent/
@@ -209,8 +218,8 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 ### Requirements to Structure Mapping
 
 **Feature Mapping:**
-*   **Workflow Enforcement (FR1-FR4):** Implemented in `scripts/lisa/commands/`
-*   **Context Governance (FR5-FR7):** Implemented in `scripts/lisa/commands/check.py`
+*   **Workflow Enforcement (FR1-FR4):** Implemented in `scripts/lisa/commands.py`
+*   **Context Governance (FR5-FR7):** Planned for `scripts/lisa/commands/check.py`
 *   **User Interaction (FR8-FR9):** Implemented in `main.py` (Output Formatting)
 
 **Cross-Cutting Concerns:**
@@ -231,7 +240,7 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 *   **Zero-Dependency (NFR):** Strictly adhered to (only standard library).
 
 ### Architecture Readiness Assessment
-**Overall Status:** READY FOR IMPLEMENTATION
+**Overall Status:** IMPLEMENTATION IN PROGRESS (Epic 2 Complete)
 
 **Confidence Level:** High
 

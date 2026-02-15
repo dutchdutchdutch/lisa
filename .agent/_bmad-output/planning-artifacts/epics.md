@@ -104,7 +104,7 @@ So that I can set global preferences and project-specific overrides.
 **And** merges the project config on top (Project overrides User)
 **And** defaults are used if no config exists
 
-### Story 1.4: The TDD Audit (Automated Verification)
+### Story 1.4: The TDD Audit (Automated Verification) [DONE]
 
 As a Tech Lead,
 I want the system to automatically enforce the "Red-Green" state transitions,
@@ -130,15 +130,9 @@ Criteria 3: Green State Verification
 **When** the agent runs `lisa verify-pass <test_file>`
 **Then** the tool runs the test and asserts it PASSES (Exit Code 0).
 
-Criteria 3: Green State Verification
-**Given** the implementation phase is complete
-**When** the system runs verification
-**Then** the specific test verified in Criteria 1 MUST pass
-**And** if it fails, the system provides feedback and loops back to implementation.
 
 
-
-### Story 1.5: Story: Local Regression Verification & Refactoring
+### Story 1.5: Story: Local Regression Verification & Refactoring [DONE]
 As a Tech Lead,
 I want LISA to enforce a "Direct Dependency" verification loop and Refactoring phase,
 So that the agent confirms the new implementation hasn't regressed related logic and code quality is maintained.
@@ -171,9 +165,10 @@ So that the system remains maintainable and understandable.
 **Then** they utilize the latest file structure and configuration formats
 **And** installation instructions are accurate for the current version
 
-### Epic 2: The Safety Valve (Spike Mode)
+### Epic 2: The Safety Valve (Spike Mode) [DONE]        
 A developer can explicitly bypass rules to prototype without fighting the tool.
-### Story 2.1: Spike Mode Activation
+
+### Story 2.1: Spike Mode Activation [DONE]
 
 As a Developer,
 I want to explicitly enable "Spike Mode",
@@ -186,7 +181,7 @@ So that I can prototype rapidly without TDD enforcement.
 **Then** the state in `.lisa/state.json` updates to `mode: SPIKE`
 **And** the output confirms "Safety Harness Disengaged"
 
-### Story 2.2: Verification Bypass
+### Story 2.2: Verification Bypass [DONE]           
 
 As a Developer,
 I want the TDD Gate to be skipped when I am in Spike Mode,
@@ -195,11 +190,19 @@ So that I can commit "dirty" code without tests.
 **Acceptance Criteria:**
 
 **Given** the state is `mode: SPIKE`
+**When** I start on a story
+**Then** the TDD Gate (Story 1.4) does not alert or enforce me to write a failing test first
+**And** the TDD Gate (Story 1.4) does not alert or enforce me to write a passing test after implementation
+**And** the TDD Gate (Story 1.4) does not alert or enforce me to refactor the code
+**But** issues a warning that the code is unverified
+
+
+**Given** the state is `mode: SPIKE`
 **When** I try to commit code changes without tests
 **Then** the TDD Gate (Story 1.4) allows the commit
 **But** issues a warning that the code is unverified
 
-### Story 2.3: Dirty Output Tagging
+### Story 2.3: Dirty Output Tagging [DONE]
 
 As a Tech Lead,
 I want to identify logs generated during Spike Mode,
@@ -212,7 +215,21 @@ So that I don't confuse unverified output with clean TDD output.
 **Then** the output is prefixed with `[SPIKE]` or `[DIRTY]`
 **And** the standard `[LISA]` prefix is modified to reflect the mode
 
-### Story 2.4: Documentation & Architecture Update
+### Story 2.4: Bypasss TDD Gate [DONE]
+As a developer I don't need to write a test for stories that are non-functional changes, so that the system isn't blocked by unnecessary tests.
+
+**Acceptance Criteria:**
+
+**Given** I am in normal mode
+**When** I start on story that is scoped as non-functional changes: such as text updates, alignment, font sizes, other layout changes, or documentation updates
+**Then** the coding agent can directly run`lisa bypass-tdd` to update the state in `.lisa/state.json` to `mode: BYPASS_TDD`
+**And** the output confirms "TDD Gate Bypassed"
+**And** once the story is completed, the coding agent can run `lisa normal-mode` to update the state in `.lisa/state.json` to `mode: NORMAL`
+**And** the output confirms "TDD Gate Enabled"
+
+
+
+### Story 2.5: Documentation & Architecture Update [DONE]
 
 As a Tech Lead,
 I want the project documentation to reflect the delivered features,
@@ -282,7 +299,64 @@ So that I don't lose the "lessons learned" from a spiral.
 **Then** the current state and logs are copied to `.lisa/archive/{timestamp}/`
 **And** the main `.lisa/state.json` is cleared to a fresh state
 
-### Story 3.5: Documentation & Architecture Update
+
+### Story 3.4.1: Context Reset
+
+As a Developer,
+I want to reset my context window,
+So that I can start fresh without losing my work.
+
+**Acceptance Criteria:**
+
+**Given** I am about to reset the context
+**When** I run `lisa reset`
+**Then** the current state and logs are copied to `.lisa/archive/{timestamp}/`
+**And** the main `.lisa/state.json` is cleared to a fresh state
+
+Epic 4: Agentic Context Management
+
+### Story 4.1: Continuous Curation (The Rolling Summary)
+As a Steering Architect
+I want to implement a "rolling summary" mechanism that compresses conversation history and "pins" core directives
+So that the worker agent maintains a high signal-to-noise ratio and avoids "instruction drift" caused by "attention scarcity" as the context window fills.
+
+**Acceptance Criteria:**
+
+Criteria 1: Compression on Threshold 
+
+**Given** the current conversation history exceeds the defined token warning threshold (e.g., 7% of context),
+**When** the Steering Agent constructs the next prompt for the worker,
+**Then** it must summarize the middle 60% of the interaction into a concise paragraph, retaining only state changes and key decisions,
+**And** it must discard the raw natural language of those middle turns to free up "active memory".
+
+Criteria 2: Pinning the Constitution 
+**Given** the context window is being compacted or modified,
+**When** the new prompt is generated,
+**Then** the original System Instructions must be "pinned" to the very top of the context window,
+**And** the agent must not allow recent user inputs to push these foundational constraints out of the model's immediate view
+
+
+### Story 4.2: Externalization (Artifact-Based State)
+As a Developer 
+I want to enforce an "Initializer and Coder" paradigm using external artifacts (like todo.txt or progress.md)
+So that long-running tasks can survive "context window overflow" and effectively reset their memory between sessions without losing the core objective.
+
+**Acceptance Criteria:**
+
+Criteria 1: Mandatory State Commit (The Coder) 
+**Given** the Worker Agent has completed a unit of work or reached a "circuit breaker" time limit, 
+**When** the agent attempts to terminate the current session, 
+**Then** the system must validate that the agent has updated the external state file (e.g., todo.txt) with a clear description of pending tasks, 
+**And** it must block termination if this artifact has not been modified.
+
+Criteria 2: Amnesiac Initialization (The Initializer) 
+**Given** a new execution session is starting for an existing task, 
+**When** the "Initializer Agent" spins up the environment, 
+**Then** it must programmatically inject the contents of the external state file into the new context window, 
+**And** the Agent must resume execution exactly from the last checkpoint defined in that file, treating the previous raw chat history as irrelevant
+
+
+### Story 4.3: Documentation & Architecture Update
 
 As a Tech Lead,
 I want the project documentation to reflect the delivered features,
@@ -294,6 +368,42 @@ So that the system remains maintainable and understandable.
 **When** I review the `README.md` and `architecture.md`
 **Then** they utilize the latest file structure and configuration formats
 **And** installation instructions are accurate for the current version
+
+Epic 5: Security & Sanitization
+### Story 5.1: Context Minimization (Security Sanitization)
+
+As a Security Engineer,
+I want to implement a "Context-Minimization" layer that extracts only necessary variables from untrusted data,
+So that I can prevent "prompt injection" attacks and ensure the reasoning engine never processes raw, malicious natural language.
+
+**Acceptance Criteria:**
+
+Criteria 1: Sanitized Variable Extraction
+**Given** an input stream containing untrusted user data (e.g., emails or web forms),
+**When** the data is received by the system,
+**Then** a restricted parser or "boundary model" must extract only the specific fields defined in the schema (e.g., {"category": "refund", "amount": 50}),
+**And** it must discard all surrounding body text or free-form commentary.
+
+Criteria 2: Isolated Reasoning Construction
+**Given** the "Core Reasoning Agent" is preparing to make a decision,
+**When** the prompt is constructed,
+**Then** it must include only the sanitized JSON data extracted in the previous step,
+**And** it must strictly exclude the original raw input string to ensure any hidden instructions (injections) are physically absent from the context
+
+
+### Story 5.2: Documentation & Architecture Update 
+
+As a Tech Lead,
+I want the project documentation to reflect the delivered features,
+So that the system remains maintainable and understandable.
+
+**Acceptance Criteria:**
+
+**Given** Epic 5 features are implemented
+**When** I review the `README.md` and `architecture.md`
+**Then** they utilize the latest file structure and configuration formats
+**And** installation instructions are accurate for the current version
+
 
 <!-- Repeat for each epic in epics_list (N = 1, 2, 3...) -->
 
@@ -319,3 +429,7 @@ So that {{value_benefit}}.
 **And** {{additional_criteria}}
 
 <!-- End story repeat -->
+
+### Tech debt and minor issues
+
+1. **Permission Handling:** The tool crashes with a raw `PermissionError` instead of a user-friendly "Please fix permissions on .lisa/" message. This violates **NFR3 (Fail-Open/Warn)**.
