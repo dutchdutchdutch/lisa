@@ -1,5 +1,5 @@
 import sys
-from .commands import verify_fail, verify_pass, analyze_deps, enable_spike, disable_spike, bypass_tdd, check_context
+from .commands import verify_fail, verify_pass, analyze_deps, enable_spike, disable_spike, bypass_tdd, check_context, reset_context
 from .config import ConfigManager
 
 def main():
@@ -26,6 +26,8 @@ def main():
         sys.exit(bypass_tdd(args))
     elif command == "context":
         sys.exit(check_context(args))
+    elif command == "reset":
+        sys.exit(reset_context(args))
     elif command == "version":
         print("0.1.0") 
     else:

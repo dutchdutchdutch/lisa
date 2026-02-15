@@ -219,7 +219,7 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 
 **Feature Mapping:**
 *   **Workflow Enforcement (FR1-FR4):** Implemented in `scripts/lisa/commands.py`
-*   **Context Governance (FR5-FR7):** Planned for `scripts/lisa/commands/check.py`
+*   **Context Governance (FR5-FR7):** Implemented in `scripts/lisa/context_stats.py` and `scripts/lisa/archiver.py`
 *   **User Interaction (FR8-FR9):** Implemented in `main.py` (Output Formatting)
 
 **Cross-Cutting Concerns:**
@@ -240,7 +240,26 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 *   **Zero-Dependency (NFR):** Strictly adhered to (only standard library).
 
 ### Architecture Readiness Assessment
-**Overall Status:** IMPLEMENTATION IN PROGRESS (Epic 2 Complete)
+**Overall Status:** IMPLEMENTATION IN PROGRESS (Epic 3 Complete)
+
+## Epic 3: Context Governance Architecture
+
+### Token Analysis Strategy
+*   **Decision:** Heuristic estimation (Chars / 4).
+*   **Rationale:** Speed and zero-dependency (no `tiktoken`). Sufficient accuracy for relative health monitoring.
+*   **Performance:** Recursive file scan with `.gitignore` respect.
+
+### Context Caching (The Traffic Light)
+*   **Decision:** Lazy Read / Atomic Write.
+*   **Pattern:**
+    1.  **Lazy:** Commands check `context_cache.json`. If `timestamp < 10m`, use cached status.
+    2.  **Force:** significant events (Verification Pass, Explicit Check) force a re-scan.
+    3.  **Atomic:** Writes use temp file + rename to prevent corruption.
+
+### Session Archival (The Black Box)
+*   **Decision:** State Snapshot.
+*   **Pattern:** `lisa reset` copies `.lisa/state.json` and recent logs to `.lisa/archive/{timestamp}/`.
+*   **Rationale:** Preserves learning from failed contexts before clearing state for a fresh start.
 
 **Confidence Level:** High
 

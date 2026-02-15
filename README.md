@@ -35,6 +35,12 @@ Enforces code quality and regression testing explicitly during the Refactor phas
 ### Spike Mode & Bypasses
 LISA supports "Spike Mode" (`lisa spike`) and "TDD Bypass" (`lisa bypass-tdd`) to temporarily disengage safety harnesses for prototyping or non-functional work.
 
+### Context Governance
+LISA proactively monitors your prompt context window usage.
+-   **Traffic Light:** Every command output includes a health indicator (e.g., `[🟢]`, `[🟡]`, `[🔴]`).
+-   **Check Context:** Run `lisa context` to see detailed token usage stats.
+-   **Session Reset:** Run `lisa reset` to archive the current session and start fresh.
+
 ## Configuration
 
 LISA supports hierarchical configuration (User > Project). See the [User Guide](docs/user_guide.md#configuration) for details.

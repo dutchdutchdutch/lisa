@@ -1,23 +1,35 @@
 import sys
 import os
 from .runner import run_test
+from .archiver import archive_session, reset_session
 from .analysis import find_importers
 from .utils import find_project_root
 from .context_stats import scan_workspace, get_context_health, update_cache, get_cached_health_icon
 from .config import ConfigManager
 from .logger import print_with_status
+from .state import StateManager, LISA_MODES
+
+def check_mode_bypass():
+    """Checks if current mode allows bypassing verification."""
+    state = StateManager().load()
+    mode = state.get("mode", LISA_MODES.NORMAL)
+# ... (rest of imports are fine, just appending archiver)
+
+# ... (omitted functions)
+
+
+
 
 
 
 def check_mode_bypass():
     """Checks if current mode allows bypassing verification."""
-    from .state import StateManager, LISA_MODES
     state = StateManager().load()
     mode = state.get("mode", LISA_MODES.NORMAL)
 
     if mode in [LISA_MODES.SPIKE, LISA_MODES.BYPASS_TDD]:
-        print(f"\n[LISA] [{mode}] MODE ACTIVE: Skipping Verification.")
-        print("       Warning: Code is unverified.")
+        print_with_status(f"[{mode}] MODE ACTIVE: Skipping Verification.")
+        print_with_status("       Warning: Code is unverified.")
         return True
     return False
 
@@ -49,18 +61,18 @@ def verify_fail(args):
             return 1
 
         if response != 'y':
-            print("[LISA] Verification rejected. Please revise the test.")
+            print_with_status("Verification rejected. Please revise the test.")
             return 1
     else:
-        print("[LISA] Automated Mode (Non-interactive)")
+        print_with_status("Automated Mode (Non-interactive)")
         
     # 2. Automated Fail Verification
-    print(f"\n[LISA] Running test (Expecting Failure)...")
+    print_with_status(f"Running test (Expecting Failure)...")
     ret_code = run_test(test_file)
     
     if ret_code == 0:
-        print(f"\n[LISA] [ERROR] Test Passed! Expected failure (RED state).")
-        print("Please check that the test is actually asserting the new behavior.")
+        print_with_status(f"[ERROR] Test Passed! Expected failure (RED state).", status_icon="🔴")
+        print_with_status("Please check that the test is actually asserting the new behavior.", status_icon="🔴")
         return 1
     else:
         print_with_status(f"[SUCCESS] RED State Verified. Test failed as expected.")
@@ -84,15 +96,15 @@ def verify_pass(args):
         return 0
     
     # 1. Automated Pass Verification
-    print("\n[LISA] Running test (Expecting Success)...")
+    print_with_status("Running test (Expecting Success)...")
     ret_code = run_test(test_file)
     
     if ret_code != 0:
-        print(f"\n[LISA] [ERROR] Test Failed! Expected success (GREEN state).")
-        print("Please fix the implementation or test.")
+        print_with_status("[ERROR] Test Failed! Expected success (GREEN state).", status_icon="🔴")
+        print_with_status("Please fix the implementation or test.", status_icon="🔴")
         return 1
     else:
-        print_with_status(f"[SUCCESS] Test Passed. Cycle Complete.")
+        print_with_status("[SUCCESS] Test Passed. Cycle Complete.")
         
         # Story Complete: Force Update Context Cache
         try:
@@ -136,11 +148,11 @@ def analyze_deps(args):
     importers = find_importers(file_path, project_root)
     
     if not importers:
-        print("No direct dependents found.")
+        print_with_status("No direct dependents found.")
     else:
-        print(f"Found {len(importers)} dependent files:")
+        print_with_status(f"Found {len(importers)} dependent files:")
         for imp in importers:
-            print(f"  - {imp}")
+            print_with_status(f"  - {imp}")
             
     return 0
 
@@ -149,7 +161,6 @@ def enable_spike(args):
     Enables Spike Mode (Safety Harness Disengaged).
     Usage: lisa spike
     """
-    from .state import StateManager, LISA_MODES
     
     # Initialize State Manager
     state_manager = StateManager()
@@ -166,7 +177,6 @@ def disable_spike(args):
     Disables Spike Mode (Re-engages Safety Harness).
     Usage: lisa normal
     """
-    from .state import StateManager, LISA_MODES
     
     # Initialize State Manager
     state_manager = StateManager()
@@ -183,7 +193,6 @@ def bypass_tdd(args):
     Enables TDD Bypass Mode (Specific to a task).
     Usage: lisa bypass-tdd
     """
-    from .state import StateManager, LISA_MODES
     
     # Initialize State Manager
     state_manager = StateManager()
@@ -200,19 +209,19 @@ def check_context(args):
     Checks the estimated token count of the workspace.
     Usage: lisa context
     """
-    print("\n[LISA] Context Analysis (The Scale)")
+    print_with_status("Context Analysis (The Scale)")
     print("-----------------------------------")
     
     try:
         project_root = find_project_root(os.getcwd())
     except FileNotFoundError:
-        print("[LISA] Error: Could not determine project root.")
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
         return 1
         
     config = ConfigManager().load()
     limit = config.get("context_limit", 8000)
     
-    print(f"Scanning workspace: {project_root}")
+    print_with_status(f"Scanning workspace: {project_root}")
     token_count = scan_workspace(project_root)
     
     health = get_context_health(token_count, limit)
@@ -229,15 +238,45 @@ def check_context(args):
         
     percentage = (token_count / limit) * 100
     
-    print(f"Estimated Tokens: {token_count} / {limit}")
-    print(f"Usage: {percentage:.1f}%")
-    print(f"Status: [{icon}] {health}")
+    print_with_status(f"Estimated Tokens: {token_count} / {limit}", status_icon=icon)
+    print_with_status(f"Usage: {percentage:.1f}%", status_icon=icon)
+    print_with_status(f"Status: {health}", status_icon=icon)
     
     if health == "RED":
-         print("\n[!] CRITICAL: Context Limit Exceeded.")
-         print("    Action Required: Run 'lisa reset' or compact files.")
+         print_with_status("CRITICAL: Context Limit Exceeded.", status_icon="🔴")
+         print_with_status("    Action Required: Run 'lisa reset' or compact files.", status_icon="🔴")
     elif health == "AMBER":
-         print("\n[!] WARNING: Approaching Context Limit.")
-         print("    Consider compiling a summary.")
+         print_with_status("WARNING: Approaching Context Limit.", status_icon="🟡")
+         print_with_status("    Consider compiling a summary.", status_icon="🟡")
          
     return 0
+
+def reset_context(args):
+    """
+    Archives the current session and resets state.
+    Usage: lisa reset
+    """
+    print_with_status("Initializing Session Reset...")
+    
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
+        return 1
+        
+    # 1. Archive
+    try:
+        archive_path = archive_session(project_root)
+        print_with_status(f"Session Archived to: {os.path.relpath(archive_path, project_root)}")
+    except Exception as e:
+        print_with_status(f"[ERROR] Archival failed: {e}", status_icon="🔴")
+        return 1
+        
+    # 2. Reset
+    if reset_session(project_root):
+        print_with_status("State Reset to Defaults (Green/Idle).")
+        print_with_status("System Ready for New Task.")
+        return 0
+    else:
+        print_with_status("[ERROR] State reset failed.", status_icon="🔴")
+        return 1

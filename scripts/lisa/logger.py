@@ -1,23 +1,23 @@
 
 import sys
 
-def print_with_status(message, status_icon="🟢"):
+def print_with_status(message, status_icon=None):
     """
     Prints a message prefixed with the current context health status icon.
+    Auto-fetches icon from cache if not provided.
     """
     # If the message is a raw newline or empty, just print it
     if message == "\n":
         print(message, end="")
         return
 
-    # If message is multiline, prefix first line? 
-    # Or just prefix the whole block? 
-    # For now, simplistic approach:
-    # [🟢] [LISA] Message...
-    
-    # We assume 'message' might already have [LISA] prefix or be a raw string.
-    # We just want to prepend the icon.
-    
+    # Auto-fetch if not provided
+    if status_icon is None:
+        try:
+            status_icon = get_current_icon()
+        except:
+            status_icon = "🟢"
+
     print(f"[{status_icon}] {message}")
 
 def get_current_icon():

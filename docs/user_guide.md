@@ -26,7 +26,8 @@ LISA uses a hierarchical configuration system.
 {
   "strictness": "strict",
   "spike_mode_allowed": true,
-  "context_limit": 8000
+  "context_limit": 20000,
+  "context_check_interval": 600
 }
 ```
 
@@ -118,6 +119,36 @@ LISA uses a hierarchical configuration system.
 *   **Output**: Lists all files in the project that import the target file.
 *   **Note**: Requires you to be in the project root or a subdirectory of a LISA project.
 
+### `lisa context`
+
+**Purpose**: specific Analysis of your current workspace's token usage. Use this to check if you are approaching the context window limit.
+
+**Usage**:
+
+```bash
+./lisa.sh context
+```
+
+*   **Output includes**:
+    *   **Traffic Light**: `[🟢]`, `[🟡]`, or `[🔴]` indicating health.
+    *   **Token Count**: Estimated tokens in the workspace.
+    *   **Usage %**: Percentage of the configured `context_limit`.
+*   **Automatic Checks**: LISA automatically checks this in the background (Lazy Check) and updates the Traffic Light on every command.
+
+### `lisa reset`
+
+**Purpose**: Archives the current session and resets the context state. Use this when the traffic light turns **RED** or you want to start a fresh task without losing history.
+
+**Usage**:
+
+```bash
+./lisa.sh reset
+```
+
+*   **Archival**: Copies the current `.lisa/state.json` and recent logs to `.lisa/archive/{timestamp}/`.
+*   **Reset**: Clears the active `state.json` to default (Green/Idle).
+*   **Result**: You are ready to start a new task with a clean slate.
+
 ### `lisa version`
 
 **Purpose**: detailed version information.
@@ -132,3 +163,5 @@ LISA uses a hierarchical configuration system.
 
 -   **"python3 not found"**: Ensure Python is installed and in your PATH.
 -   **"Could not determine project root"**: Ensure `lisa.sh` is in the root of your project and you are running it from there or a subdirectory.
+-   **"Context Limit Exceeded"**: Run `lisa reset` to archive and clear your session.
+-   **"[🔴] Context Red"**: Your workspace is too large. Clean up files or run `lisa reset`.
