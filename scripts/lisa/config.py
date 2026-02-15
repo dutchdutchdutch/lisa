@@ -7,7 +7,8 @@ class ConfigManager:
     _DEFAULTS = {
         "strictness": "strict",
         "spike_mode_allowed": True,
-        "context_limit": 20000
+        "context_limit": 20000,
+        "context_check_interval": 600
     }
 
     def __init__(self, user_config_path=None, project_config_path=None):

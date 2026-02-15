@@ -3,8 +3,9 @@ import os
 from .runner import run_test
 from .analysis import find_importers
 from .utils import find_project_root
-from .context_stats import scan_workspace, get_context_health
+from .context_stats import scan_workspace, get_context_health, update_cache, get_cached_health_icon
 from .config import ConfigManager
+from .logger import print_with_status
 
 
 
@@ -32,7 +33,7 @@ def verify_fail(args):
     test_file = args[0]
     interactive = "--interactive" in args
     
-    print(f"\n[LISA] TDD Gate: Verifying RED State for {test_file}")
+    print_with_status(f"TDD Gate: Verifying RED State for {test_file}")
     print("---------------------------------------------------")
 
     if check_mode_bypass():
@@ -62,7 +63,7 @@ def verify_fail(args):
         print("Please check that the test is actually asserting the new behavior.")
         return 1
     else:
-        print(f"\n[LISA] [SUCCESS] RED State Verified. Test failed as expected.")
+        print_with_status(f"[SUCCESS] RED State Verified. Test failed as expected.")
         return 0
 
 def verify_pass(args):
@@ -76,7 +77,7 @@ def verify_pass(args):
 
     test_file = args[0]
     
-    print(f"\n[LISA] TDD Gate: Verifying GREEN State for {test_file}")
+    print_with_status(f"TDD Gate: Verifying GREEN State for {test_file}")
     print("---------------------------------------------------")
 
     if check_mode_bypass():
@@ -91,7 +92,21 @@ def verify_pass(args):
         print("Please fix the implementation or test.")
         return 1
     else:
-        print(f"\n[LISA] [SUCCESS] Test Passed. Cycle Complete.")
+        print_with_status(f"[SUCCESS] Test Passed. Cycle Complete.")
+        
+        # Story Complete: Force Update Context Cache
+        try:
+            # We don't want to be too noisy, so maybe just do it.
+            # But let's show we are doing it.
+            project_root = find_project_root(os.getcwd())
+            config = ConfigManager().load()
+            limit = config.get("context_limit", 20000)
+            token_count = scan_workspace(project_root)
+            health = get_context_health(token_count, limit)
+            update_cache(token_count, health)
+        except Exception:
+            pass # Fail silently
+            
         return 0
 
 def analyze_deps(args):
@@ -109,7 +124,7 @@ def analyze_deps(args):
         print(f"[LISA] Error: File not found: {file_path}")
         return 1
         
-    print(f"\n[LISA] Impact Analysis: Finding dependents of {file_path}")
+    print_with_status(f"Impact Analysis: Finding dependents of {file_path}")
     print("---------------------------------------------------")
     
     try:
@@ -201,6 +216,9 @@ def check_context(args):
     token_count = scan_workspace(project_root)
     
     health = get_context_health(token_count, limit)
+    
+    # Force update cache
+    update_cache(token_count, health)
     
     # Determine icon
     icon = "🟢"

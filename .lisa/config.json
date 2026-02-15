@@ -1,4 +1,5 @@
 {
     "strictness": "strict",
-    "spike_mode_allowed": true
+    "spike_mode_allowed": true,
+    "context_limit": 200000
 }
