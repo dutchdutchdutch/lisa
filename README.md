@@ -39,7 +39,12 @@ LISA supports "Spike Mode" (`lisa spike`) and "TDD Bypass" (`lisa bypass-tdd`) t
 LISA proactively monitors your prompt context window usage.
 -   **Traffic Light:** Every command output includes a health indicator (e.g., `[🟢]`, `[🟡]`, `[🔴]`).
 -   **Check Context:** Run `lisa context` to see detailed token usage stats.
+-   **Context Analytics:** 
+    -   `lisa context status`: View current system activity.
+    -   `lisa context size`: View token and file counts.
+    -   `lisa context health`: View saturation and health metrics.
 -   **Session Reset:** Run `lisa reset` to archive the current session and start fresh.
+-   **State Checkpoint:** Run `lisa checkpoint` (formerly `externalize`) to validate your external state artifact (`todo.md`) is present and up-to-date.
 
 ## Configuration
 

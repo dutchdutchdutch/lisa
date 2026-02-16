@@ -68,9 +68,11 @@ class TestContextStats(unittest.TestCase):
                 f.write("1234" * 1000) # Should be ignored
                 
             # Total expected: 1 + 2 = 3 tokens.
+            # Total files: 2 (ignored.txt is excluded)
             
-            total_tokens = scan_workspace(test_dir, ignores=[".git"])
+            total_tokens, file_count = scan_workspace(test_dir, ignores=[".git"])
             self.assertEqual(total_tokens, 3)
+            self.assertEqual(file_count, 2)
             
         finally:
             shutil.rmtree(test_dir)

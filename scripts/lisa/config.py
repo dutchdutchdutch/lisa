@@ -8,12 +8,23 @@ class ConfigManager:
         "strictness": "strict",
         "spike_mode_allowed": True,
         "context_limit": 20000,
-        "context_check_interval": 600
+        "context_check_interval": 600,
+        "external_state_file": "todo.md",
+        "external_state_ttl": 600
     }
 
-    def __init__(self, user_config_path=None, project_config_path=None):
+    def __init__(self, user_config_path=None, project_config_path=None, project_root=None):
         self.user_config_path = user_config_path or os.path.expanduser("~/.lisa/config.json")
-        self.project_config_path = project_config_path or os.path.abspath("./.lisa/config.json")
+        
+        if project_config_path:
+            self.project_config_path = project_config_path
+        else:
+            if project_root:
+                self.project_config_path = os.path.join(project_root, ".lisa", "config.json")
+            else:
+                 # Fallback for backward compatibility / tests without root
+                self.project_config_path = os.path.abspath("./.lisa/config.json")
+                
         self._config = self.load()
 
     def _load_json_safe(self, path):

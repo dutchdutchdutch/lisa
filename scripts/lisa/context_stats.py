@@ -50,6 +50,7 @@ def scan_workspace(root_dir, ignores=None):
         ignores = DEFAULT_IGNORES
         
     total_tokens = 0
+    file_count = 0
     
     for root, dirs, files in os.walk(root_dir):
         # Modify dirs in-place to skip ignored directories
@@ -71,11 +72,12 @@ def scan_workspace(root_dir, ignores=None):
                 # Heuristic: 1 token ~= 4 chars (bytes). 
                 # This is safe for large files and requires zero memory.
                 total_tokens += math.ceil(size / 4)
+                file_count += 1
             except (IOError, OSError):
                 # Skip files we can't read or stat
                 continue
                 
-    return total_tokens
+    return total_tokens, file_count
 
 def update_cache(token_count, health):
     """Updates the token count cache."""
@@ -135,7 +137,15 @@ def get_cached_health_icon():
         # Expired or missing -> Re-scan
         try:
             root = find_project_root(os.getcwd())
-            token_count = scan_workspace(root)
+            
+            # Helper to get limit with root awareness
+            try:
+                config = ConfigManager(project_root=root).load()
+                limit = config.get("context_limit", 20000)
+            except:
+                pass # Use default limit from top of function if this fails
+                
+            token_count, _ = scan_workspace(root)
             health = get_context_health(token_count, limit)
             update_cache(token_count, health)
         except Exception:

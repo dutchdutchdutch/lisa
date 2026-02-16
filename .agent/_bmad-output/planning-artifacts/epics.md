@@ -242,9 +242,9 @@ So that the system remains maintainable and understandable.
 **Then** they utilize the latest file structure and configuration formats
 **And** installation instructions are accurate for the current version
 
-### Epic 3: Context Governance (The Governor)
+### Epic 3: Context Governance (The Governor) [DONE]
 A developer receives proactive alerts when context window health degrades.
-### Story 3.1: Token Analysis Logic (The Scale)
+### Story 3.1: Token Analysis Logic (The Scale) [DONE]
 
 As a Developer,
 I want to know the "weight" of my current context window,
@@ -253,11 +253,11 @@ So that I can decide when to reset before performance degrades.
 **Acceptance Criteria:**
 
 **Given** I am running a LISA command
-**When** the context analyzer runs
+**When**  the context analyzer runs
 **Then** it estimates the token count (or file size proxy) of the current workspace state
 **And** returns a "Load Percentage" based on the configured limit
 
-### Story 3.2: Context Health Alerting
+### Story 3.2: Context Health Alerting [DONE]
 
 As a Developer,
 I want to be warned when my context is getting full,
@@ -273,7 +273,7 @@ So that I don't waste prompts on "hallucinated" responses.
 **When** the load is > 90%
 **Then** status is RED ("Context Saturation - Reset Required")
 
-### Story 3.3: Visual Traffic Light UI
+### Story 3.3: Visual Traffic Light UI [DONE]
 
 As a Developer,
 I want instant visual feedback on my context health,
@@ -286,7 +286,7 @@ So that I can check it at a glance without running a separate command.
 **Then** it includes a visual indicator: `[🟢]`, `[🟡]`, or `[🔴]`
 **And** the indicator matches the current health state
 
-### Story 3.4: Session Archival (The Black Box)
+### Story 3.4: Session Archival (The Black Box) [DONE]
 
 As a Developer,
 I want to save my session history before resetting context,
@@ -299,23 +299,22 @@ So that I don't lose the "lessons learned" from a spiral.
 **Then** the current state and logs are copied to `.lisa/archive/{timestamp}/`
 **And** the main `.lisa/state.json` is cleared to a fresh state
 
+### Story 3.5: Documentation & Architecture Update [DONE] 
 
-### Story 3.4.1: Context Reset
-
-As a Developer,
-I want to reset my context window,
-So that I can start fresh without losing my work.
+As a Tech Lead,
+I want the project documentation to reflect the delivered features,
+So that the system remains maintainable and understandable.
 
 **Acceptance Criteria:**
 
-**Given** I am about to reset the context
-**When** I run `lisa reset`
-**Then** the current state and logs are copied to `.lisa/archive/{timestamp}/`
-**And** the main `.lisa/state.json` is cleared to a fresh state
+**Given** Epic 3 features are implemented
+**When** I review the `README.md` and `architecture.md`
+**Then** they utilize the latest file structure and configuration formats
+**And** installation instructions are accurate for the current version
 
-Epic 4: Agentic Context Management
+### Epic 4: Agentic Context Management [DONE]
 
-### Story 4.1: Continuous Curation (The Rolling Summary)
+### Story 4.1: Continuous Curation (The Rolling Summary) [DONE]
 As a Steering Architect
 I want to implement a "rolling summary" mechanism that compresses conversation history and "pins" core directives
 So that the worker agent maintains a high signal-to-noise ratio and avoids "instruction drift" caused by "attention scarcity" as the context window fills.
@@ -324,7 +323,7 @@ So that the worker agent maintains a high signal-to-noise ratio and avoids "inst
 
 Criteria 1: Compression on Threshold 
 
-**Given** the current conversation history exceeds the defined token warning threshold (e.g., 7% of context),
+**Given** the current conversation history exceeds the defined token warning threshold (e.g., 80% of context),
 **When** the Steering Agent constructs the next prompt for the worker,
 **Then** it must summarize the middle 60% of the interaction into a concise paragraph, retaining only state changes and key decisions,
 **And** it must discard the raw natural language of those middle turns to free up "active memory".
@@ -336,7 +335,7 @@ Criteria 2: Pinning the Constitution
 **And** the agent must not allow recent user inputs to push these foundational constraints out of the model's immediate view
 
 
-### Story 4.2: Externalization (Artifact-Based State)
+### Story 4.2: Externalization (Artifact-Based State) [DONE]
 As a Developer 
 I want to enforce an "Initializer and Coder" paradigm using external artifacts (like todo.txt or progress.md)
 So that long-running tasks can survive "context window overflow" and effectively reset their memory between sessions without losing the core objective.
@@ -355,8 +354,78 @@ Criteria 2: Amnesiac Initialization (The Initializer)
 **Then** it must programmatically inject the contents of the external state file into the new context window, 
 **And** the Agent must resume execution exactly from the last checkpoint defined in that file, treating the previous raw chat history as irrelevant
 
+### Story 4.3 Command UX
 
-### Story 4.3: Documentation & Architecture Update
+4.3.1 Change lisa externalize command to lisa checkpoint. 
+Rational Junior developers understand that if you don't reach a checkpoint in a game, you lose your progress when you quit. This perfectly maps to the "Context Window Overflow"
+
+Extending lisa context:
+
+### Story 4.3.1: Command UX (Checkpoint) [DONE]
+
+As a Developer,
+I want the `lisa externalize` command to be renamed to `lisa checkpoint`,
+So that it aligns with my mental model of "saving progress" in a game or workflow.
+
+**Acceptance Criteria:**
+
+Criteria 1: Command Rename
+**Given** the user or agent wants to save state,
+**When** they run `lisa checkpoint`,
+**Then** it performs the same validation logic as the old `externalize` command (checking state file freshness).
+
+Criteria 2: Skill Update
+**Given** the "Externalizer" skill is active,
+**When** it decides to save state,
+**Then** it must use the term "Checkpoint" and run `lisa checkpoint`.
+
+### Story 4.3.2: Command UX (Context Status) [DONE]
+
+As a Developer,
+I want to know the current activity of the context system,
+So that I understand if it is active, monitoring, compacting, or archiving.
+
+**Acceptance Criteria:**
+
+Criteria 1: Status Reporting
+**Given** the user runs `lisa context status`,
+**When** the system is in a specific state (e.g., Monitoring),
+**Then** it should return that state clearly to the user.
+
+### Story 4.3.3: Command UX (Context Size) [DONE]
+
+As a Developer,
+I want to see quantitative metrics about my context window,
+So that I know how much "space" consumes.
+
+**Acceptance Criteria:**
+
+Criteria 1: Detailed Metrics
+**Given** the user requests context size,
+**When** they run `lisa context size`,
+**Then** it should return:
+-   Total Token Count (estimated)
+-   Number of Files in Workspace
+-   Number of Interaction Turns (if available)
+
+### Story 4.3.4: Command UX (Context Health) [DONE]
+
+As a Developer,
+I want to assess the qualitative health of my context and detect drift,
+So that I can intervene before the agent loses focus.
+
+**Acceptance Criteria:**
+
+Criteria 1: Health Metrics
+**Given** the user runs `lisa context health`,
+**Then** it should return a report including Saturation, Signal Ratio, and Drift Metric.
+
+Criteria 2: Drift Detection
+**Given** the current context vector is significantly different from the "golden" baseline,
+**When** `lisa context health` is run,
+**Then** it should return `CRITICAL: DRIFT DETECTED` and prompt for intervention.
+
+### Story 4.4: Documentation & Architecture Update [DONE]
 
 As a Tech Lead,
 I want the project documentation to reflect the delivered features,
@@ -364,12 +433,88 @@ So that the system remains maintainable and understandable.
 
 **Acceptance Criteria:**
 
-**Given** Epic 3 features are implemented
+**Given** Epic 4 features are implemented
+**When** I review the `README.md` , `architecture.md`, and 'user_guide.md'
+**Then** they utilize the latest file structure and configuration formats
+    **And** installation instructions are accurate for the current version
+    **And** user guide updates are accurate for the current version
+
+Epic 5: Polish  MVP for user testing
+
+Beyond the skeleton and basic features. 
+
+### Story 5.1: Permission Handling
+**Permission Handling:** The tool crashes with a raw `PermissionError` instead of a user-friendly "Please fix permissions on .lisa/" message. This violates **NFR3 (Fail-Open/Warn)**.
+
+**Acceptance Criteria:**
+
+Criteria 1: Permission Handling
+**Given** the user runs `lisa init`,
+**When** the tool encounters a permission error,
+**Then** it should return a user-friendly error message instead of crashing.
+
+### Story 5.2: Token Heuristic
+**Token Heuristic:** The current `char/4` token counting in `context_stats.py` is simplistic and may be inaccurate for code-heavy repos. Consider moving to `tiktoken` or similar for better precision in future. [Added during Story 4.1 Review]
+
+**Acceptance Criteria:**
+
+Criteria 1: Token Counting
+**Given** the user runs `lisa context size`,
+**When** the system counts tokens using the `char/4` heuristic,
+**Then** it should return an accurate token count.
+
+### Story 5.3: Story: Agentic Turn-Watchdog (Logic Durability Monitor)
+As a Tech Lead,
+I want LISA to track the number of discrete reasoning cycles (turns) in a session,
+So that I can intervene before the agent’s internal model of the problem decays or drifts away from the original story boundary.
+
+**Acceptance Criteria (The "Gherkin")**
+
+Scenario 1: The "Goldfish" Threshold (Turn 12)
+**Given** an agent is working in a complicated or complex domain.
+**When** the agent completes its 12th discrete turn (one turn = one request-response cycle).
+**Then** the skill MUST pause execution and issue a "Logic Alignment Check" 
+**And** it MUST explicitly ask  itself (the agent): "Am I still solving the original problem, or have I entered a Tangent Spiral?"**.
+
+Scenario 2: Detecting "Silent" Assumption Drift
+**Given** the Turn-Watchdog is active.
+**When** a turn involves the agent modifying code outside the Selective Scope defined at the start of the story.
+**Then** the watchdog MUST flag this turn as a "Boundary Violation".
+**And** it MUST force a human review to determine if the turn represents a legitimate "Ask for Expansion" or unmanaged scope drift.
+
+Scenario 3: Turn-Based Compaction Recovery
+**Given** the agent has surpassed 15 turns and the internal context is becoming "noisy" with terminal output and logs.
+**When** a human intervention occurs.
+**Then** the skill MUST generate a "Grounding Snapshot"—a concise summary of the current state of the code vs. the original requirements.
+**And** it MUST suggest a "Context Purge" (starting a fresh session with only this snapshot) to eliminate the risk of compound context decay. use existing Lisa skills to manage the context purge.
+
+Why focus on turns over tokens?
+While your token counter monitors the "size" of the container, the Turn-Watchdog monitors the "signal-to-noise ratio." In complex environments, an agent can be well within its token limit but still be "confidently solving the wrong problem" because it has built on 12 turns of subtly incorrect assumptions.
+
+This watchdog acts as the "chaperone" to ensure the agent doesn't wander into a high-cost Tangent Spiral.
+
+### Story 5.4: Run Polish pass at the end of each epic 
+turning these manual instructions into a skill:
+At the end of each epic, run a polish pass to check for: 
+Duplicate Code: Common utilities (e.g., config loading, path resolution).
+Consistency: Naming conventions, error handling patterns.
+Project Structure: Ensuring clear separation of concerns.
+run regression suite after polishing 
+
+### Story 5.5: Documentation & Architecture Update 
+
+As a Tech Lead,
+I want the project documentation to reflect the delivered features,
+So that the system remains maintainable and understandable.
+
+**Acceptance Criteria:**
+
+**Given** Epic 5 features are implemented
 **When** I review the `README.md` and `architecture.md`
 **Then** they utilize the latest file structure and configuration formats
 **And** installation instructions are accurate for the current version
 
-Epic 5: Security & Sanitization
+Epic 6: Security & Sanitization
 ### Story 5.1: Context Minimization (Security Sanitization)
 
 As a Security Engineer,
@@ -391,7 +536,7 @@ Criteria 2: Isolated Reasoning Construction
 **And** it must strictly exclude the original raw input string to ensure any hidden instructions (injections) are physically absent from the context
 
 
-### Story 5.2: Documentation & Architecture Update 
+### Story 6.2: Documentation & Architecture Update 
 
 As a Tech Lead,
 I want the project documentation to reflect the delivered features,
@@ -432,4 +577,10 @@ So that {{value_benefit}}.
 
 ### Tech debt and minor issues
 
-1. **Permission Handling:** The tool crashes with a raw `PermissionError` instead of a user-friendly "Please fix permissions on .lisa/" message. This violates **NFR3 (Fail-Open/Warn)**.
+
+4. **Drift Detection:** Story 4.3.4 requested embedding-based drift detection. This has been deferred in favor of a simpler heuristic or future implementation. [Added during Story 4.3 Review]
+2. Polish pass at the end of each epic check for: 
+Duplicate Code: Common utilities (e.g., config loading, path resolution).
+Consistency: Naming conventions, error handling patterns.
+Project Structure: Ensuring clear separation of concerns.
+-run regression suite after polishing

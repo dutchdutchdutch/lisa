@@ -267,6 +267,27 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 *   **First Priority:** Run the initialization command to create the directory structure.
 *   **Guideline:** Do not introduce `pip` or `npm` dependencies without a formal architecture review (Phase 2+).
 
+## Epic 4: Agentic Context Management
+
+### Context Curation Pattern
+*   **Decision:** "Rolling Summary" Protocol.
+*   **Pattern:** When context health hits AMBER (70%), the agent must Curate (summarize) before proceeding.
+*   **Mechanism:** `lisa context` outputs specific instructions at saturation thresholds.
+
+### Externalization Strategy (The Heap)
+*   **Decision:** Artifact-Based State (`todo.md`).
+*   **Rationale:** Large Language Models (LLMs) lose "working memory" as context fills. By forcing state into a file (`todo.md`), we offload memory to disk.
+*   **Enforcement:** `lisa checkpoint` verifies this file exists and has been modified recently (freshness check).
+
+### Command UX Standardization
+*   **Decision:** Sub-command Architecture for Context.
+*   **Pattern:** `lisa context [status|size|health]`.
+*   **Rationale:** Groups related inspection tools under a single namespace, reducing root-level command clutter.
+*   **Migration:** `lisa externalize` renamed to `lisa checkpoint` to better align with the mental model of "saving game state".
+
+**Confidence Level:** High
+**Status:** IMPLEMENTATION COMPLETE
+
 
 
 

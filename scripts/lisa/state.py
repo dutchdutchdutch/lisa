@@ -10,10 +10,25 @@ class LISA_MODES:
     SPIKE = "SPIKE"
     BYPASS_TDD = "BYPASS_TDD"
 
+class ContextActivity:
+    ACTIVE = "active"
+    MONITORING = "monitoring"
+    COMPACTING = "compacting"
+    CHECKPOINTING = "checkpointing"
+    RESETTING = "resetting"
+    ARCHIVING = "archiving"
+
 class StateManager:
-    def __init__(self, state_file=".lisa/state.json"):
-        self.state_file = state_file
-        self.lock_file = f"{state_file}.lock"
+    def __init__(self, state_file=None, project_root=None):
+        if state_file:
+             self.state_file = state_file
+        elif project_root:
+             self.state_file = os.path.join(project_root, ".lisa", "state.json")
+        else:
+             # Fallback default (fragile if not at root, but keeps backward compat)
+             self.state_file = ".lisa/state.json"
+             
+        self.lock_file = f"{self.state_file}.lock"
         self._ensure_dir()
 
     @property
@@ -22,6 +37,7 @@ class StateManager:
             "taskId": "none",
             "status": "GREEN",
             "mode": LISA_MODES.NORMAL,
+            "activity": "active",
             "lastUpdated": time.time()
         }
 

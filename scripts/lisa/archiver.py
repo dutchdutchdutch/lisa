@@ -50,9 +50,8 @@ def reset_session(root_dir):
     """
     Resets the session state to defaults.
     """
-    # Fix: StateManager expects a file path, not a dir path
-    state_file = os.path.join(root_dir, ".lisa", "state.json")
-    state_manager = StateManager(state_file)
+    # Use StateManager with project_root
+    state_manager = StateManager(project_root=root_dir)
     
     # Reset to default state
     new_state = {

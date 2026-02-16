@@ -11,8 +11,9 @@ show_help() {
     echo "Usage: $0 [command]"
     echo ""
     echo "Commands:"
-    echo "  version   Show version information"
-    echo "  help      Show this help message"
+    echo "  checkpoint   Validate external state (todo.md)"
+    echo "  version      Show version information"
+    echo "  help         Show this help message"
 }
 
 # Check for Python 3

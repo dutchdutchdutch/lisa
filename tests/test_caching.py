@@ -87,7 +87,7 @@ class TestContextCaching(unittest.TestCase):
             json.dump(params, f)
             
         # Mock scan result to return high usage (RED)
-        mock_scan.return_value = 9500 
+        mock_scan.return_value = (9500, 50) 
         
         icon = get_cached_health_icon()
         
@@ -103,7 +103,7 @@ class TestContextCaching(unittest.TestCase):
     @patch('scripts.lisa.context_stats.scan_workspace')
     def test_get_cached_health_icon_no_cache(self, mock_scan):
         """Test behavior when no cache exists."""
-        mock_scan.return_value = 100
+        mock_scan.return_value = (100, 5)
         
         icon = get_cached_health_icon()
         
