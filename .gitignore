@@ -22,8 +22,6 @@ _bmad-output/
 # === Planning & review artifacts ===
 code_review*.md
 todo.md
-docs/prd.md
-docs/background.md
 
 # === Misc dev artifacts ===
 src/
