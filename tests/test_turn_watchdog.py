@@ -5,7 +5,7 @@ import tempfile
 import json
 from unittest.mock import patch, MagicMock
 from scripts.lisa.state import StateManager
-from scripts.lisa.commands import tick, check_context
+from scripts.lisa.commands import turns, check_context
 
 class TestTurnWatchdog(unittest.TestCase):
     
@@ -24,14 +24,34 @@ class TestTurnWatchdog(unittest.TestCase):
         os.chdir(self.original_cwd)
         shutil.rmtree(self.test_dir)
 
-    def test_tick_increments_turn(self):
-        """Should increment turn count when tick is called."""
+    def test_turns_report_current(self):
+        """Should report current turn count when called with no args."""
+        # Set turn count to 5 first
+        manager = StateManager(project_root=self.test_dir)
+        manager.update("turn_count", 5)
+        
         with patch('scripts.lisa.commands.print_with_status') as mock_print:
-            tick([])
-            mock_print.assert_called_with("Turn Counter Incremented: 1", status_icon="⏱️")
-            
-            tick([])
-            mock_print.assert_called_with("Turn Counter Incremented: 2", status_icon="⏱️")
+            result = turns([])
+            self.assertEqual(result, 0)
+            mock_print.assert_called_with("Current Turn: 5", status_icon="⏱️")
+
+    def test_turns_set_explicit(self):
+        """Should set turn count to explicit value when given a number."""
+        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+            result = turns(["7"])
+            self.assertEqual(result, 0)
+            mock_print.assert_called_with("Turn Counter Set: 7", status_icon="⏱️")
+        
+        # Verify it was persisted
+        manager = StateManager(project_root=self.test_dir)
+        state = manager.load()
+        self.assertEqual(state.get("turn_count"), 7)
+
+    def test_turns_invalid_input(self):
+        """Should reject non-numeric input."""
+        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+            result = turns(["abc"])
+            self.assertEqual(result, 1)
 
     @patch('scripts.lisa.commands.scan_workspace')
     @patch('scripts.lisa.commands.ConfigManager')

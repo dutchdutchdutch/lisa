@@ -3,6 +3,8 @@ import sys
 import os
 import fcntl
 import time
+import hashlib
+import tempfile
 from contextlib import contextmanager
 
 class LISA_MODES:
@@ -23,13 +25,44 @@ class StateManager:
         if state_file:
              self.state_file = state_file
         elif project_root:
-             self.state_file = os.path.join(project_root, ".lisa", "state.json")
+             primary = os.path.join(project_root, ".lisa", "state.json")
+             if self._is_writable(primary):
+                 self.state_file = primary
+             else:
+                 self.state_file = self._fallback_path(project_root)
+                 sys.stderr.write(
+                     f"[LISA] [INFO] State file not writable at .lisa/state.json — "
+                     f"using fallback: {self.state_file}\n"
+                 )
         else:
              # Fallback default (fragile if not at root, but keeps backward compat)
              self.state_file = ".lisa/state.json"
              
         self.lock_file = f"{self.state_file}.lock"
         self._ensure_dir()
+
+    @staticmethod
+    def _is_writable(path):
+        """Test if a file path is writable (create or append)."""
+        try:
+            if os.path.exists(path):
+                with open(path, "r+"):
+                    return True
+            else:
+                # Try creating it
+                with open(path, "w") as f:
+                    json.dump({}, f)
+                return True
+        except (PermissionError, OSError):
+            return False
+
+    @staticmethod
+    def _fallback_path(project_root):
+        """Generate a deterministic fallback path in the system temp directory."""
+        project_hash = hashlib.md5(project_root.encode()).hexdigest()[:12]
+        fallback_dir = os.path.join(tempfile.gettempdir(), f".lisa-{project_hash}")
+        os.makedirs(fallback_dir, exist_ok=True)
+        return os.path.join(fallback_dir, "state.json")
 
     @property
     def _default_state(self):

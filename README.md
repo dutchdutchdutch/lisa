@@ -6,6 +6,7 @@ LISA is a context governance tool for AI-assisted development. It enforces a Red
 
 1.  Copy `lisa.sh` to your project root.
 2.  Copy `scripts/lisa` to `scripts/lisa`.
+3.  Install dependencies: `pip install tiktoken` (required for accurate token counting).
 
 For detailed installation instructions, see the [User Guide](docs/user_guide.md#installation).
 
@@ -29,22 +30,38 @@ Enforces the **Red-Green-Refactor** cycle. The TDD Gate prevents implementation 
 ### `refactor-gate`
 Ensures code quality and regression testing explicitly during the Refactor phase, preventing regressions in existing functionality.
 
-### `refactor-gate`
-Enforces code quality and regression testing explicitly during the Refactor phase, preventing regressions in existing functionality.
-
 ### Spike Mode & Bypasses
 LISA supports "Spike Mode" (`lisa spike`) and "TDD Bypass" (`lisa bypass-tdd`) to temporarily disengage safety harnesses for prototyping or non-functional work.
 
 ### Context Governance
-LISA proactively monitors your prompt context window usage.
+LISA proactively monitors your prompt context window usage using **tiktoken** for accurate token counting.
 -   **Traffic Light:** Every command output includes a health indicator (e.g., `[🟢]`, `[🟡]`, `[🔴]`).
 -   **Check Context:** Run `lisa context` to see detailed token usage stats.
--   **Context Analytics:** 
+-   **Context Analytics:**
     -   `lisa context status`: View current system activity.
     -   `lisa context size`: View token and file counts.
     -   `lisa context health`: View saturation and health metrics.
 -   **Session Reset:** Run `lisa reset` to archive the current session and start fresh.
--   **State Checkpoint:** Run `lisa checkpoint` (formerly `externalize`) to validate your external state artifact (`todo.md`) is present and up-to-date.
+-   **State Checkpoint:** Run `lisa checkpoint` to validate your external state artifact (`todo.md`) is present and up-to-date.
+
+### Turn Watchdog
+Tracks discrete agentic reasoning cycles to detect logic drift before context decay sets in.
+-   **Tick:** Run `lisa turns` to increment the turn counter after each reasoning cycle.
+-   **Goldfish Threshold:** At turn 12, a "Logic Alignment Check" is triggered.
+-   **Compaction Recovery:** At turn 20+, a "Grounding Snapshot" is recommended.
+
+### Polish Pass
+A reusable epic-level refactoring skill that detects cross-cutting quality issues.
+-   **Invoke:** Run `lisa polish` to load the Polish Pass skill protocol.
+-   **Phases:** Duplicate detection, naming audit, error handling consistency, magic value scan, performance/security review, and project structure verification.
+-   **Skill:** `skills/polish-pass/skill.md`
+
+### Lifecycle Hooks
+Automatically invoke LISA skills at key story lifecycle boundaries.
+-   **Trigger:** Run `lisa hooks <event>` to fire hooks for a lifecycle event.
+-   **Events:** `story-kickoff`, `story-in-dev`, `story-test`, `story-complete`, `context-reset`.
+-   **Story Completion:** `story-complete` automatically runs `lisa polish`, a context health check, and conditional remediation.
+-   **Fail-Open:** Hook failures are logged as warnings and never block workflow.
 
 ## Configuration
 

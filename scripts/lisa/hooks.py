@@ -75,6 +75,11 @@ def run_story_complete(project_root):
     Runs configured hooks, then performs a health check.
     If health is AMBER/RED, triggers remediation based on hooks_mode.
     
+    Note: Regression tests are NOT required for documentation-only stories
+    (i.e., when mode is BYPASS_TDD). The health check and polish pass still
+    run, but the dev-story workflow should skip the regression suite for
+    non-functional changes.
+    
     Args:
         project_root: Absolute path to the project root
         

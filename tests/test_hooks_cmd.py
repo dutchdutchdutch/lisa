@@ -34,7 +34,7 @@ class TestRunHooksCmd(unittest.TestCase):
     def test_valid_event_runs_hooks(self, mock_print, mock_root, mock_run_hooks):
         """Should call run_hooks for valid event name."""
         mock_root.return_value = "/tmp/test"
-        mock_run_hooks.return_value = [("lisa tick", True, "ok")]
+        mock_run_hooks.return_value = [("lisa turns", True, "ok")]
         result = run_hooks_cmd(["story-in-dev"])
         self.assertEqual(result, 0)
         mock_run_hooks.assert_called_once_with("story-in-dev", "/tmp/test")

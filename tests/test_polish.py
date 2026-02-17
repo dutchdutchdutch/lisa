@@ -15,7 +15,7 @@ class TestPolish(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.lisa_dir = os.path.join(self.test_dir, ".lisa")
         os.makedirs(self.lisa_dir)
-        self.skill_dir = os.path.join(self.test_dir, ".agent", "skills", "polish-pass")
+        self.skill_dir = os.path.join(self.test_dir, "skills", "polish-pass")
         os.makedirs(self.skill_dir)
         with open(os.path.join(self.skill_dir, "skill.md"), "w") as f:
             f.write("# Polish Pass Skill\nTest content")
@@ -41,7 +41,7 @@ class TestPolish(unittest.TestCase):
         result = polish([])
         self.assertEqual(result, 1)
         mock_print.assert_any_call(
-            "Error: Polish Pass skill not found at .agent/skills/polish-pass/skill.md",
+            "Error: Polish Pass skill not found at skills/polish-pass/skill.md",
             status_icon="🔴"
         )
 

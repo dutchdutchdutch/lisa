@@ -14,7 +14,7 @@ class ConfigManager:
         "hooks_mode": "auto",
         "lifecycle_hooks": {
             "story-kickoff": [],
-            "story-in-dev": ["lisa tick"],
+            "story-in-dev": ["lisa turns"],
             "story-test": [],
             "story-complete": ["lisa polish"],
             "context-reset": ["lisa checkpoint"]

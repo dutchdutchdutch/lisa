@@ -38,7 +38,7 @@ class TestRunHooks(unittest.TestCase):
         mock_config = MagicMock()
         mock_config.get.side_effect = lambda key, default=None: {
             "lifecycle_hooks": {
-                "story-in-dev": ["lisa tick"],
+                "story-in-dev": ["lisa turns"],
             },
         }.get(key, default)
         mock_config_cls.return_value = mock_config
@@ -48,7 +48,7 @@ class TestRunHooks(unittest.TestCase):
 
         self.assertEqual(len(results), 1)
         cmd, success, output = results[0]
-        self.assertEqual(cmd, "lisa tick")
+        self.assertEqual(cmd, "lisa turns")
         self.assertTrue(success)
 
     @patch('scripts.lisa.hooks.ConfigManager')

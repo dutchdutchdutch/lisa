@@ -214,10 +214,11 @@ def bypass_tdd(args):
     print("       MODE: BYPASS_TDD (Verification Skipped)")
     return 0
 
-def tick(args):
+def turns(args):
     """
-    Increments the agentic turn counter.
-    Usage: lisa tick
+    Manages the agentic turn counter.
+    Usage: lisa turns        (report current turn)
+           lisa turns <N>    (set turn to N)
     """
     try:
         project_root = find_project_root(os.getcwd())
@@ -226,8 +227,27 @@ def tick(args):
         return 1
         
     state_manager = StateManager(project_root=project_root)
-    new_turn = state_manager.increment_turn()
-    print_with_status(f"Turn Counter Incremented: {new_turn}", status_icon="⏱️")
+    
+    if not args:
+        # Report mode: show current turn count
+        state = state_manager.load()
+        current_turn = state.get("turn_count", 0)
+        print_with_status(f"Current Turn: {current_turn}", status_icon="⏱️")
+        return 0
+    
+    # Set mode: set turn to explicit value
+    try:
+        turn_number = int(args[0])
+    except ValueError:
+        print_with_status(f"Error: '{args[0]}' is not a valid turn number.", status_icon="🔴")
+        return 1
+    
+    if turn_number < 0:
+        print_with_status("Error: Turn number must be non-negative.", status_icon="🔴")
+        return 1
+    
+    state_manager.update("turn_count", turn_number)
+    print_with_status(f"Turn Counter Set: {turn_number}", status_icon="⏱️")
     return 0
 
 def check_context(args):
@@ -533,10 +553,10 @@ def polish(args):
         print_with_status("Error: Could not determine project root.", status_icon="🔴")
         return 1
 
-    skill_path = os.path.join(project_root, ".agent", "skills", "polish-pass", "skill.md")
+    skill_path = os.path.join(project_root, "skills", "polish-pass", "skill.md")
 
     if not os.path.exists(skill_path):
-        print_with_status("Error: Polish Pass skill not found at .agent/skills/polish-pass/skill.md", status_icon="🔴")
+        print_with_status("Error: Polish Pass skill not found at skills/polish-pass/skill.md", status_icon="🔴")
         print_with_status("Install the skill or create it manually.", status_icon="💡")
         return 1
 

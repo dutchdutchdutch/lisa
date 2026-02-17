@@ -1,8 +1,32 @@
+# === Python ===
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+
+# === OS ===
 .DS_Store
+
+# === LISA runtime state (regenerated) ===
 .lisa/state.json
 .lisa/state.json.lock
 .lisa/state.json.tmp
+.lisa/state.json.temp
+.lisa/context_cache.json
 .lisa/archive/
+
+# === Build framework & dev tooling ===
+.agent/
+_bmad-output/
+
+# === Planning & review artifacts ===
+code_review*.md
+todo.md
+docs/prd.md
+docs/background.md
+
+# === Misc dev artifacts ===
+src/
+temp_subdir/
+tests/manual_fail.py
+scripts/lisa/.lisa/

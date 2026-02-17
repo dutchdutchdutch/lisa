@@ -39,9 +39,9 @@ def main():
         sys.exit(checkpoint(args))
     elif command == "init":
         sys.exit(init_session(args))
-    elif command == "tick":
-        from .commands import tick
-        sys.exit(tick(args))
+    elif command == "turns":
+        from .commands import turns
+        sys.exit(turns(args))
     elif command == "polish":
         from .commands import polish
         sys.exit(polish(args))
