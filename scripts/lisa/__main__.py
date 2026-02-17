@@ -60,6 +60,12 @@ def main():
         sys.exit(refactor(args))
     elif command == "hooks":
         sys.exit(run_hooks_cmd(args))
+    elif command == "classify":
+        from .commands import classify
+        sys.exit(classify(args))
+    elif command == "scope":
+        from .commands import scope_cmd
+        sys.exit(scope_cmd(args))
     elif command == "version":
         print("0.1.0") 
     else:

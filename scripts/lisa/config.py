@@ -18,6 +18,26 @@ class ConfigManager:
             "story-test": ["lisa refactor"],
             "story-complete": ["lisa polish"],
             "context-reset": ["lisa checkpoint"]
+        },
+        "test_layers": {
+            "integration_path_patterns": [
+                "tests/integration/",
+                "tests/api/",
+                "tests/contract/",
+                "tests/pact/",
+                "tests/component/"
+            ],
+            "integration_name_patterns": [
+                "*_contract_test.py",
+                "*_pact_test.py",
+                "*_api_test.py",
+                "*_component_test.py",
+                "test_*_contract.py",
+                "test_*_pact.py",
+                "test_*_api.py",
+                "test_*_component.py"
+            ],
+            "custom_rules": {}
         }
     }
 

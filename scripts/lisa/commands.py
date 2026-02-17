@@ -10,6 +10,8 @@ from .config import ConfigManager
 from .logger import print_with_status
 from .state import StateManager, LISA_MODES, ContextActivity
 from .hooks import LIFECYCLE_EVENTS, run_hooks, run_story_complete
+from .classifier import classify_file, classify_all, persist_layers, LAYER_UNIT, LAYER_INTEGRATION
+from .scope import derive_modified_files_from_git, derive_scope, persist_scope, load_scope, clear_scope
 
 def check_mode_bypass(project_root=None):
     """Checks if current mode allows bypassing verification."""
@@ -717,3 +719,176 @@ def run_hooks_cmd(args):
         # NFR3: Fail-open
         print_with_status(f"[WARNING] Hook execution error: {e}", status_icon="⚠️")
         return 0
+
+def classify(args):
+    """
+    Classifies test files into layers (UNIT, INTEGRATION).
+    Usage: lisa classify <file>    (classify single file)
+           lisa classify --all     (classify all test files, show overview)
+    """
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
+        return 1
+
+    config = ConfigManager(project_root=project_root).load()
+
+    if not args or args[0] == "--all":
+        # Layer overview mode (AC3)
+        print_with_status("Test Layer Classification")
+        print("---------------------------------------------------")
+
+        results = classify_all(project_root, config)
+
+        if not results:
+            print_with_status("No test files found.", status_icon="⚠️")
+            return 0
+
+        # Persist for downstream use (AC1)
+        layers_path = persist_layers(project_root, results)
+
+        # Group by layer
+        unit_files = [r for r in results if r["layer"] == LAYER_UNIT]
+        integration_files = [r for r in results if r["layer"] == LAYER_INTEGRATION]
+
+        # Count defaults for warning (AC2)
+        default_classified = [r for r in results if r["method"] == "default"]
+
+        print_with_status(f"UNIT: {len(unit_files)} files", status_icon="🧪")
+        for r in unit_files:
+            method_tag = f" [{r['method']}]" if r["method"] != "default" else ""
+            print_with_status(f"  {r['file']}{method_tag}")
+
+        print("")
+        print_with_status(f"INTEGRATION: {len(integration_files)} files", status_icon="🔗")
+        for r in integration_files:
+            subtype_tag = f" ({r['subtype']})" if r.get("subtype") else ""
+            print_with_status(f"  {r['file']}{subtype_tag} [{r['method']}]")
+
+        print("")
+        print_with_status(f"Total: {len(results)} files ({len(unit_files)} unit, {len(integration_files)} integration)", status_icon="📊")
+
+        if default_classified:
+            print_with_status(f"Note: {len(default_classified)} files classified as UNIT by default (no matching rule)", status_icon="⚠️")
+
+        print_with_status(f"Layers persisted to: {os.path.relpath(layers_path, project_root)}", status_icon="💾")
+        return 0
+
+    else:
+        # Single file mode (AC1)
+        file_path = args[0]
+        rel_path = os.path.relpath(file_path, project_root) if os.path.isabs(file_path) else file_path
+
+        if not os.path.exists(os.path.join(project_root, rel_path)):
+            print_with_status(f"Error: File not found: {rel_path}", status_icon="🔴")
+            return 1
+
+        result = classify_file(rel_path, config, project_root)
+
+        subtype_display = f" ({result['subtype']})" if result.get("subtype") else ""
+        print_with_status(f"File: {result['file']}")
+        print_with_status(f"Layer: {result['layer']}{subtype_display}", status_icon="🏷️")
+        print_with_status(f"Method: {result['method']}", status_icon="ℹ️")
+
+        if result["method"] == "default":
+            print_with_status("Note: No matching rule — classified as UNIT by default", status_icon="⚠️")
+
+        return 0
+
+def scope_cmd(args):
+    """
+    Derives and manages the test scope from modified files.
+    Usage: lisa scope                    (show current scope)
+           lisa scope <file1> <file2>    (set scope from explicit files)
+           lisa scope --git              (derive scope from git diff)
+           lisa scope --clear            (clear the current scope)
+    """
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
+        return 1
+
+    # Handle --clear
+    if "--clear" in args:
+        if clear_scope(project_root):
+            print_with_status("Scope cleared.", status_icon="🟢")
+        else:
+            print_with_status("No scope was set.", status_icon="ℹ️")
+        return 0
+
+    # Handle --git (derive from version control)
+    if "--git" in args:
+        config = ConfigManager(project_root=project_root).load()
+        base_branch = config.get("base_branch", "main")
+        modified = derive_modified_files_from_git(project_root, base_branch=base_branch)
+        if not modified:
+            print_with_status("No modified source files found against base branch.", status_icon="⚠️")
+            return 1
+
+        scope = derive_scope(project_root, modified, base_branch=base_branch, source="git_diff")
+        if scope is None:
+            print_with_status("Error: No layer classification found. Run 'lisa classify --all' first.", status_icon="🔴")
+            return 1
+
+        persist_scope(project_root, scope)
+        _print_scope(scope)
+        return 0
+
+    # Handle explicit file list
+    file_args = [a for a in args if not a.startswith("--")]
+    if file_args:
+        scope = derive_scope(project_root, file_args, source="explicit")
+        if scope is None:
+            print_with_status("Error: No layer classification found. Run 'lisa classify --all' first.", status_icon="🔴")
+            return 1
+
+        persist_scope(project_root, scope)
+        _print_scope(scope)
+        return 0
+
+    # Default: show current scope
+    scope = load_scope(project_root)
+    if scope is None:
+        print_with_status("No scope is currently set.", status_icon="ℹ️")
+        print_with_status("Use 'lisa scope <files>' or 'lisa scope --git' to set scope.", status_icon="💡")
+        return 0
+
+    _print_scope(scope)
+    return 0
+
+
+def _print_scope(scope):
+    """Format and display scope data."""
+    print_with_status("Scope Derivation")
+    print("---------------------------------------------------")
+
+    print_with_status(f"Source: {scope.get('source', 'unknown')}", status_icon="ℹ️")
+
+    print("")
+    print_with_status("Modified Files:", status_icon="📝")
+    for f in scope.get("modified_files", []):
+        print_with_status(f"  {f}")
+
+    print("")
+    print_with_status("Dependency Cone:", status_icon="🔗")
+    for f in scope.get("dependency_cone", []):
+        print_with_status(f"  {f}")
+
+    in_scope = scope.get("in_scope_tests", {})
+    unit_tests = in_scope.get("UNIT", [])
+    integration_tests = in_scope.get("INTEGRATION", [])
+
+    print("")
+    print_with_status(f"In-Scope Tests — UNIT: {len(unit_tests)}", status_icon="🧪")
+    for t in unit_tests:
+        print_with_status(f"  {t}")
+
+    print_with_status(f"In-Scope Tests — INTEGRATION: {len(integration_tests)}", status_icon="🔗")
+    for t in integration_tests:
+        print_with_status(f"  {t}")
+
+    total = len(unit_tests) + len(integration_tests)
+    print("")
+    print_with_status(f"Total in-scope tests: {total}", status_icon="📊")
