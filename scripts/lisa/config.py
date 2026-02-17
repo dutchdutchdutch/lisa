@@ -15,7 +15,7 @@ class ConfigManager:
         "lifecycle_hooks": {
             "story-kickoff": [],
             "story-in-dev": ["lisa turns"],
-            "story-test": [],
+            "story-test": ["lisa refactor"],
             "story-complete": ["lisa polish"],
             "context-reset": ["lisa checkpoint"]
         }

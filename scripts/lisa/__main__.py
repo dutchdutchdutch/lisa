@@ -45,6 +45,9 @@ def main():
     elif command == "polish":
         from .commands import polish
         sys.exit(polish(args))
+    elif command == "refactor":
+        from .commands import refactor
+        sys.exit(refactor(args))
     elif command == "hooks":
         sys.exit(run_hooks_cmd(args))
     elif command == "version":

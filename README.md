@@ -20,6 +20,22 @@ Run LISA commands via the shell wrapper:
 ./lisa.sh [command]
 ```
 
+## Lifecycle Stages
+
+LISA monitors five story lifecycle stages. Each stage can trigger hooks and skills automatically.
+
+| Stage | Default Hook / Skill | Description |
+|-------|---------------------|-------------|
+| **`story-kickoff`** | *(none)* | Story begins. Configurable entry point for initializing context or loading state. |
+| **`story-in-dev`** | `lisa turns` → **Turn Watchdog** | Each development turn. Tracks reasoning cycles; fires drift warnings at turn 12 (Goldfish Threshold) and compaction alerts at turn 20+. |
+| **`story-test`** | **Refactor Gate** | Tests are green. Runs a structured refactor loop — improve code quality without changing behavior, then verify impact on dependent modules via `lisa analyze`. |
+| **`story-complete`** · Step 1 | `lisa polish` → **Polish Pass** | Runs a multi-phase quality scan: duplicate code, naming audit, error handling gaps, magic values, and performance/security review. |
+| **`story-complete`** · Step 2 | `lisa context` → **Context Health Check** | Measures token usage via **tiktoken** against your configured limit. Reports a traffic light (🟢🟡🔴) plus turn-count drift analysis. |
+| **`story-complete`** · Step 3 | Auto-remediation (if 🟡 or 🔴) | **Context Curator** — compress and summarize conversation history. **Checkpoint** — pin critical state to `todo.md`. **Session Management** — recommend `lisa reset` to archive and start fresh when context is saturated. |
+| **`context-reset`** | `lisa checkpoint` → **Checkpoint** | After `lisa reset`. Validates that the external state artifact (`todo.md`) exists and is fresh. |
+
+> Hooks are configurable via `lifecycle_hooks` in `.lisa/config.json`. All hooks are **fail-open** — failures log warnings but never block workflow.
+
 ## Modules & Skills
 
 LISA is built on a set of core skills that enforce development best practices.

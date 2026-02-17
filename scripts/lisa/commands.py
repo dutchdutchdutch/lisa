@@ -540,6 +540,22 @@ def context_health(args):
     # Drift Metric deferred to tech debt
     print_with_status(f"Status:          {report.status}", status_icon="rx") # rx maps to a health icon usually, or just use text
     
+    # Turn count (Story 5.3 integration)
+    state_manager = StateManager(project_root=project_root)
+    state = state_manager.load()
+    turn_count = state.get("turn_count", 0)
+    
+    turn_warning = config.get("turn_warning_threshold", 12)
+    turn_limit = config.get("turn_limit", 20)
+    
+    turn_icon = "🟢"
+    if turn_count > turn_limit:
+        turn_icon = "🔴"
+    elif turn_count >= turn_warning:
+        turn_icon = "🟡"
+    
+    print_with_status(f"Turn Count:      {turn_count}", status_icon=turn_icon)
+    
     return 0
 
 def polish(args):
@@ -569,6 +585,38 @@ def polish(args):
         print(content)
         print("=" * 60)
         print_with_status("Follow the protocol above to execute the Polish Pass.", status_icon="🧹")
+        return 0
+    except Exception as e:
+        print_with_status(f"Error reading skill file: {e}", status_icon="🔴")
+        return 1
+
+def refactor(args):
+    """
+    Outputs the Refactor Gate skill instructions for agent or human consumption.
+    Usage: lisa refactor
+    """
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
+        return 1
+
+    skill_path = os.path.join(project_root, "skills", "refactor-gate", "skill.md")
+
+    if not os.path.exists(skill_path):
+        print_with_status("Error: Refactor Gate skill not found at skills/refactor-gate/skill.md", status_icon="🔴")
+        print_with_status("Install the skill or create it manually.", status_icon="💡")
+        return 1
+
+    try:
+        with open(skill_path, "r") as f:
+            content = f.read()
+        
+        print_with_status("Refactor Gate: Loading skill instructions...", status_icon="🔧")
+        print("=" * 60)
+        print(content)
+        print("=" * 60)
+        print_with_status("Follow the protocol above to execute the Refactor Gate.", status_icon="🔧")
         return 0
     except Exception as e:
         print_with_status(f"Error reading skill file: {e}", status_icon="🔴")

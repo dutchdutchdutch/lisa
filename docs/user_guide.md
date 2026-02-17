@@ -34,7 +34,7 @@ LISA uses a hierarchical configuration system.
   "lifecycle_hooks": {
     "story-kickoff": [],
     "story-in-dev": ["lisa turns"],
-    "story-test": [],
+    "story-test": ["lisa refactor"],
     "story-complete": ["lisa polish"],
     "context-reset": ["lisa checkpoint"]
   }
@@ -200,6 +200,20 @@ LISA uses a hierarchical configuration system.
 *   Follow the printed protocol to execute the Polish Pass.
 *   Best used at the end of an epic or sprint.
 
+### `lisa refactor`
+
+**Purpose**: Loads the Refactor Gate skill protocol. Guides a structured refactor loop — improve code quality without changing behavior, then verify impact on dependent modules.
+
+**Usage**:
+
+```bash
+./lisa.sh refactor
+```
+
+*   Reads and outputs `skills/refactor-gate/skill.md`.
+*   Follow the printed protocol to execute the Refactor Gate.
+*   Runs automatically at the `story-test` lifecycle stage.
+
 ### `lisa hooks <event>`
 
 **Purpose**: Triggers lifecycle hooks for a given event. Hooks are configured in `.lisa/config.json` and execute LISA commands at key story lifecycle boundaries.
@@ -216,7 +230,7 @@ LISA uses a hierarchical configuration system.
 |-------|-------------|-------------|
 | `story-kickoff` | (none) | When a story starts |
 | `story-in-dev` | `lisa turns` | Each development turn |
-| `story-test` | (none) | After green phase |
+| `story-test` | `lisa refactor` | After green phase (Refactor Gate) |
 | `story-complete` | `lisa polish` | Story marked complete (also runs health + remediation) |
 | `context-reset` | `lisa checkpoint` | After context reset |
 
