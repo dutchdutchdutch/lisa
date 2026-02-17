@@ -59,6 +59,7 @@ def reset_session(root_dir):
         "status": "IDLE",
         "task": None,
         "step": None,
+        "turn_count": 0,
         "lastUpdated": time.time()
     }
     

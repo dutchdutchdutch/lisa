@@ -453,20 +453,27 @@ Criteria 1: Permission Handling
 **When** the tool encounters a permission error,
 **Then** it should return a user-friendly error message instead of crashing.
 
-### Story 5.2: Token Heuristic
-**Token Heuristic:** The current `char/4` token counting in `context_stats.py` is simplistic and may be inaccurate for code-heavy repos. Consider moving to `tiktoken` or similar for better precision in future. [Added during Story 4.1 Review]
+### Story 5.2: Token Heuristic [DONE]
+**Token Heuristic:** The current `char/4` token counting in `context_stats.py` is simplistic and may be inaccurate for code-heavy repos. Consider moving to `tiktoken`. [Added during Story 4.1 Review]
+
+Precise billing-grade accuracy isn't needed, you can use tiktoken (specifically p50k_base or similar)
+
+First try to evaluate if tiktoken is significantly better than char/4, char/4.5, or char/5. If we don't see significent improvement, stick with the nearest division number.  We will change the acceptence criteria accoring to the findings.
 
 **Acceptance Criteria:**
 
 Criteria 1: Token Counting
 **Given** the user runs `lisa context size`,
-**When** the system counts tokens using the `char/4` heuristic,
-**Then** it should return an accurate token count.
+**When** the system counts tokens using the `tiktoken` 
+**Then** return the token count.
+**And**  add a comment under the token count that says "Approximation method across models for watchdog purposes. Not billing grade accurate."
+
 
 ### Story 5.3: Story: Agentic Turn-Watchdog (Logic Durability Monitor)
 As a Tech Lead,
 I want LISA to track the number of discrete reasoning cycles (turns) in a session,
 So that I can intervene before the agent’s internal model of the problem decays or drifts away from the original story boundary.
+
 
 **Acceptance Criteria (The "Gherkin")**
 
@@ -483,7 +490,7 @@ Scenario 2: Detecting "Silent" Assumption Drift
 **And** it MUST force a human review to determine if the turn represents a legitimate "Ask for Expansion" or unmanaged scope drift.
 
 Scenario 3: Turn-Based Compaction Recovery
-**Given** the agent has surpassed 15 turns and the internal context is becoming "noisy" with terminal output and logs.
+**Given** the agent has surpassed 20 turns and the internal context is becoming "noisy" with terminal output and logs.
 **When** a human intervention occurs.
 **Then** the skill MUST generate a "Grounding Snapshot"—a concise summary of the current state of the code vs. the original requirements.
 **And** it MUST suggest a "Context Purge" (starting a fresh session with only this snapshot) to eliminate the risk of compound context decay. use existing Lisa skills to manage the context purge.
@@ -493,15 +500,68 @@ While your token counter monitors the "size" of the container, the Turn-Watchdog
 
 This watchdog acts as the "chaperone" to ensure the agent doesn't wander into a high-cost Tangent Spiral.
 
-### Story 5.4: Run Polish pass at the end of each epic 
-turning these manual instructions into a skill:
-At the end of each epic, run a polish pass to check for: 
-Duplicate Code: Common utilities (e.g., config loading, path resolution).
-Consistency: Naming conventions, error handling patterns.
-Project Structure: Ensuring clear separation of concerns.
-run regression suite after polishing 
+### Story 5.4: Polish Pass (Epic-Level Refactoring Skill) ✅ Done
 
-### Story 5.5: Documentation & Architecture Update 
+As a Tech Lead,
+I want LISA to provide a reusable "Polish Pass" skill that can be executed at the end of any epic or sprint,
+so that cross-cutting quality issues accumulated across multiple stories are systematically detected and resolved before moving forward.
+
+**Acceptance Criteria:**
+
+Criteria 1: Duplicate Code Detection & Consolidation
+**Given** a codebase where multiple stories have introduced similar patterns independently,
+**When** the polish pass runs,
+**Then** the agent identifies duplicate utility patterns and consolidates them into shared helpers.
+
+Criteria 2: Naming Convention & Style Consistency
+**Given** code written across multiple stories,
+**When** the polish pass runs,
+**Then** naming conventions are audited and corrected to be consistent across the project.
+
+Criteria 3: Error Handling Pattern Consistency
+**Given** the project has established error handling patterns,
+**When** the polish pass runs,
+**Then** all modules follow the same error handling approach consistently.
+
+Criteria 4: Project Structure Verification
+**Given** the architecture defines clear boundaries and separation of concerns,
+**When** the polish pass runs,
+**Then** the agent verifies code is in the correct locations per the architecture.
+
+Criteria 5: Regression Suite Validation
+**Given** all polish/refactoring changes have been applied,
+**When** the full regression test suite is executed,
+**Then** all tests pass with 0 failures.
+
+Criteria 6: Skill Artifact
+**Given** the polish pass logic is defined,
+**When** the story is complete,
+**Then** a reusable skill definition exists in `.agent/skills/polish-pass/skill.md` that can be invoked on any project where LISA is active.
+
+### Story 5.5: Skill Lifecycle Hooks
+
+As a Tech Lead,
+I want LISA skills to be automatically invoked at key story lifecycle boundaries (e.g., story start, story completion, context reset),
+so that agents don't have to remember to run health checks manually and critical skills like context monitoring are reliably executed.
+
+**Acceptance Criteria:**
+
+Criteria 1: Post-Story Health Check
+**Given** a story has just been marked complete or moved to review,
+**When** the dev-story workflow reaches its completion step,
+**Then** `lisa context` (or equivalent health check) is automatically run and its output is included in the completion report.
+
+Criteria 2: Configurable Hook Points
+**Given** the project has installed LISA skills,
+**When** I configure lifecycle hooks in the project config,
+**Then** I can specify which commands run at which lifecycle events (story-start, story-complete, context-reset).
+
+Criteria 3: Fail-Open Execution
+**Given** a lifecycle hook command fails (e.g., permission error, missing dependency),
+**When** the hook fires,
+**Then** the failure is logged as a warning but does NOT block story completion.
+
+### Story 5.6: Documentation & Architecture Update 
 
 As a Tech Lead,
 I want the project documentation to reflect the delivered features,
@@ -510,12 +570,13 @@ So that the system remains maintainable and understandable.
 **Acceptance Criteria:**
 
 **Given** Epic 5 features are implemented
-**When** I review the `README.md` and `architecture.md`
+**When** I review the `README.md` and `architecture.md` and `user_guide.md`
 **Then** they utilize the latest file structure and configuration formats
 **And** installation instructions are accurate for the current version
 
-Epic 6: Security & Sanitization
-### Story 5.1: Context Minimization (Security Sanitization)
+### Epic 6: Security & Sanitization
+
+### Story 6.1: Context Minimization (Security Sanitization)
 
 As a Security Engineer,
 I want to implement a "Context-Minimization" layer that extracts only necessary variables from untrusted data,

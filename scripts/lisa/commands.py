@@ -5,23 +5,11 @@ from .runner import run_test
 from .archiver import archive_session, reset_session
 from .analysis import find_importers
 from .utils import find_project_root
-from .context_stats import scan_workspace, get_context_health, update_cache, get_cached_health_icon
+from .context_stats import scan_workspace, get_context_health, update_cache, get_cached_health_icon, get_cache_status
 from .config import ConfigManager
 from .logger import print_with_status
 from .state import StateManager, LISA_MODES, ContextActivity
-
-def check_mode_bypass():
-    """Checks if current mode allows bypassing verification."""
-    state = StateManager().load()
-    mode = state.get("mode", LISA_MODES.NORMAL)
-# ... (rest of imports are fine, just appending archiver)
-
-# ... (omitted functions)
-
-
-
-
-
+from .hooks import LIFECYCLE_EVENTS, run_hooks, run_story_complete
 
 def check_mode_bypass(project_root=None):
     """Checks if current mode allows bypassing verification."""
@@ -118,18 +106,13 @@ def verify_pass(args):
         return 1
     else:
         print_with_status("[SUCCESS] Test Passed. Cycle Complete.")
-        
-        # Story Complete: Force Update Context Cache
+
+        # Fire story-complete lifecycle hooks (AC1)
+        # This runs health check + remediation via run_story_complete()
         try:
-            # We don't want to be too noisy, so maybe just do it.
-            # But let's show we are doing it.
-            config = ConfigManager(project_root=project_root).load()
-            limit = config.get("context_limit", 20000)
-            token_count, _ = scan_workspace(project_root)
-            health = get_context_health(token_count, limit)
-            update_cache(token_count, health)
+            run_story_complete(project_root)
         except Exception:
-            pass # Fail silently
+            pass  # NFR3: Fail-open
             
         return 0
 
@@ -231,13 +214,31 @@ def bypass_tdd(args):
     print("       MODE: BYPASS_TDD (Verification Skipped)")
     return 0
 
+def tick(args):
+    """
+    Increments the agentic turn counter.
+    Usage: lisa tick
+    """
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
+        return 1
+        
+    state_manager = StateManager(project_root=project_root)
+    new_turn = state_manager.increment_turn()
+    print_with_status(f"Turn Counter Incremented: {new_turn}", status_icon="⏱️")
+    return 0
+
 def check_context(args):
     """
-    Checks the estimated token count of the workspace.
-    Usage: lisa context
+    Checks the estimated token count of the workspace and turn count.
+    Usage: lisa context [force]
     """
     print_with_status("Context Analysis (The Scale)")
     print("-----------------------------------")
+    
+    force = "force" in args
     
     try:
         project_root = find_project_root(os.getcwd())
@@ -246,36 +247,86 @@ def check_context(args):
         return 1
         
     config = ConfigManager(project_root=project_root).load()
-    limit = config.get("context_limit", 8000)
+    limit = config.get("context_limit", 20000)
+    interval = config.get("context_check_interval", 600)
     
-    print_with_status(f"Scanning workspace: {project_root}")
-    token_count, file_count = scan_workspace(project_root)
+    # Check Cache first (Medium Issue 1 Fix)
+    cache = get_cache_status(limit)
+    last_update = cache.get("timestamp", 0)
+    current_time = time.time()
+    is_fresh = (current_time - last_update) < interval
     
+    if is_fresh and not force and "token_count" in cache:
+        token_count = cache["token_count"]
+        print_with_status(f"Scanning workspace: {project_root} (Cached)", status_icon="ℹ️")
+        # We skip the scan
+        file_count = "N/A (Cached)" 
+    else:
+        print_with_status(f"Scanning workspace: {project_root}")
+        token_count, file_count = scan_workspace(project_root)
+        health = get_context_health(token_count, limit)
+        update_cache(token_count, health)
+
+    # Re-calculate health from token_count (whether cached or new)
     health = get_context_health(token_count, limit)
     
-    # Force update cache
-    update_cache(token_count, health)
-    
-    # Determine icon
-    icon = "🟢"
+    # Determine icon for Tokens
+    token_icon = "🟢"
     if health == "AMBER":
-        icon = "🟡"
+        token_icon = "🟡"
     elif health == "RED":
-        icon = "🔴"
+        token_icon = "🔴"
         
     percentage = (token_count / limit) * 100
     
-    print_with_status(f"Estimated Tokens: {token_count} / {limit}", status_icon=icon)
-    print_with_status(f"Usage: {percentage:.1f}%", status_icon=icon)
-    print_with_status(f"Status: {health}", status_icon=icon)
+    print_with_status(f"Estimated Tokens: {token_count} / {limit}", status_icon=token_icon)
+    print("    Approximation method across models for watchdog purposes. Not billing grade accurate.")
+    print_with_status(f"Usage: {percentage:.1f}%", status_icon=token_icon)
+    print_with_status(f"Status: {health}", status_icon=token_icon)
     
+    # Turn Analysis (Story 5.3)
+    print("")
+    print_with_status("Turn Analysis (The Clock)")
+    print("-----------------------------------")
+    
+    state_manager = StateManager(project_root=project_root)
+    state = state_manager.load()
+    turn_count = state.get("turn_count", 0)
+    
+    # Defaults from Story 5.3, but configurable
+    turn_warning = config.get("turn_warning_threshold", 12)
+    turn_limit = config.get("turn_limit", 20)
+    
+    # Logic: Green < warning, Amber warning-limit, Red > limit
+    turn_icon = "🟢"
+    turn_status = "GREEN"
+    
+    if turn_count > turn_limit:
+        turn_icon = "🔴"
+        turn_status = "RED"
+    elif turn_count >= turn_warning:
+        turn_icon = "🟡"
+        turn_status = "AMBER"
+        
+    print_with_status(f"Current Turn: {turn_count}", status_icon=turn_icon)
+    print_with_status(f"Status: {turn_status}", status_icon=turn_icon)
+    
+    if turn_status == "RED":
+         print_with_status(f"CRITICAL: Turn Limit Exceeded (>{turn_limit}).", status_icon="🔴")
+         print_with_status("    Action Required: Perform 'Context Purge' (Compact & Reset).", status_icon="🔴")
+    elif turn_status == "AMBER":
+         print_with_status(f"WARNING: Approaching Turn Limit ({turn_warning}-{turn_limit}).", status_icon="🟡")
+         print_with_status("    Action Recommended: Check for drift. Consider wrapping up story.", status_icon="🟡")
+    
+    # Token Warnings (After Turn Analysis so both are visible)
     if health == "RED":
          print_with_status("CRITICAL: Context Limit Exceeded.", status_icon="🔴")
          print_with_status("    Action Required: Run 'lisa reset' or compact files.", status_icon="🔴")
     elif health == "AMBER":
          print_with_status("WARNING: Approaching Context Limit.", status_icon="🟡")
          print_with_status("    Action Recommended: Perform Context Curation (Summarize History).", status_icon="🟡")
-         return 2 # Return code 2 for AMBER state (Scriptable trigger)
+         if turn_status == "GREEN": # Only return 2 if token warning is primary, else maybe higher?
+             return 2 
          
     return 0
 
@@ -304,6 +355,11 @@ def reset_context(args):
     if reset_session(project_root):
         print_with_status("State Reset to Defaults (Green/Idle).")
         print_with_status("System Ready for New Task.")
+        # Fire context-reset lifecycle hooks
+        try:
+            run_hooks("context-reset", project_root)
+        except Exception:
+            pass  # NFR3: Fail-open
         return 0
     else:
         print_with_status("[ERROR] State reset failed.", status_icon="🔴")
@@ -357,29 +413,34 @@ def init_session(args):
         print_with_status("Error: Could not determine project root.", status_icon="🔴")
         return 1
 
-    # Load Config
-    config = ConfigManager(project_root=project_root).load()
-    filename = config.get("external_state_file", "todo.md")
-
-    todo_path = os.path.join(project_root, filename)
-    
-    if not os.path.exists(todo_path):
-        print_with_status(f"Error: '{filename}' not found. Cannot initialize state.", status_icon="🔴")
-        return 1
-        
-    print_with_status(f"Initializing Context from {filename}...", status_icon="🟢")
-    print("---------------------------------------------------")
     try:
+        # Load Config
+        config = ConfigManager(project_root=project_root).load()
+        filename = config.get("external_state_file", "todo.md")
+
+        todo_path = os.path.join(project_root, filename)
+        
+        if not os.path.exists(todo_path):
+            print_with_status(f"Error: '{filename}' not found. Cannot initialize state.", status_icon="🔴")
+            return 1
+            
+        print_with_status(f"Initializing Context from {filename}...", status_icon="🟢")
+        print("---------------------------------------------------")
+
         with open(todo_path, "r") as f:
             content = f.read()
             print(content)
-    except Exception as e:
-        print_with_status(f"Error reading state file: {e}", status_icon="🔴")
-        return 1
+            
+        print("---------------------------------------------------")
+        print_with_status("Context Injected.", status_icon="🟢")
+        return 0
         
-    print("---------------------------------------------------")
-    print_with_status("Context Injected.", status_icon="🟢")
-    return 0
+    except PermissionError:
+        print_with_status("Error: Permission denied. Please check permissions on .lisa/ or the project root.", status_icon="🔴")
+        return 1
+    except Exception as e:
+        print_with_status(f"Error: {e}", status_icon="🔴")
+        return 1
 
 def context_status(args):
     """
@@ -420,12 +481,13 @@ def context_size(args):
     
     token_count, file_count = scan_workspace(project_root)
     
-    # We don't have turn count tracking yet (Story 4.3.3 Task 1 partial)
-    # But acceptance criteria asks for it if available.
-    # For now, we omit or show N/A.
+    state_manager = StateManager(project_root=project_root)
+    state = state_manager.load()
+    turn_count = state.get("turn_count", 0)
     
     print_with_status(f"Token Count: {token_count}", status_icon="📊")
     print_with_status(f"File Count:  {file_count}", status_icon="📂")
+    print_with_status(f"Turn Count:  {turn_count}", status_icon="⏱️")
     return 0
 
 def context_health(args):
@@ -460,3 +522,72 @@ def context_health(args):
     
     return 0
 
+def polish(args):
+    """
+    Outputs the Polish Pass skill instructions for agent or human consumption.
+    Usage: lisa polish
+    """
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
+        return 1
+
+    skill_path = os.path.join(project_root, ".agent", "skills", "polish-pass", "skill.md")
+
+    if not os.path.exists(skill_path):
+        print_with_status("Error: Polish Pass skill not found at .agent/skills/polish-pass/skill.md", status_icon="🔴")
+        print_with_status("Install the skill or create it manually.", status_icon="💡")
+        return 1
+
+    try:
+        with open(skill_path, "r") as f:
+            content = f.read()
+        
+        print_with_status("Polish Pass: Loading skill instructions...", status_icon="🧹")
+        print("=" * 60)
+        print(content)
+        print("=" * 60)
+        print_with_status("Follow the protocol above to execute the Polish Pass.", status_icon="🧹")
+        return 0
+    except Exception as e:
+        print_with_status(f"Error reading skill file: {e}", status_icon="🔴")
+        return 1
+
+def run_hooks_cmd(args):
+    """
+    Runs lifecycle hooks for a given event.
+    Usage: lisa hooks <event>
+    """
+    if not args:
+        print_with_status("Usage: lisa hooks <event>", status_icon="🔴")
+        print_with_status(f"Valid events: {', '.join(LIFECYCLE_EVENTS)}", status_icon="ℹ️")
+        return 1
+
+    event_name = args[0]
+
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
+        return 1
+
+    if event_name not in LIFECYCLE_EVENTS:
+        print_with_status(f"Error: Unknown lifecycle event '{event_name}'", status_icon="🔴")
+        print_with_status(f"Valid events: {', '.join(LIFECYCLE_EVENTS)}", status_icon="ℹ️")
+        return 1
+
+    # story-complete uses the orchestrator
+    if event_name == "story-complete":
+        return run_story_complete(project_root)
+
+    # All other events use the generic hook runner
+    try:
+        results = run_hooks(event_name, project_root)
+        if not results:
+            print_with_status(f"No hooks configured for '{event_name}'", status_icon="ℹ️")
+        return 0
+    except Exception as e:
+        # NFR3: Fail-open
+        print_with_status(f"[WARNING] Hook execution error: {e}", status_icon="⚠️")
+        return 0

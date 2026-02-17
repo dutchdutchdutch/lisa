@@ -1,5 +1,5 @@
 import sys
-from .commands import verify_fail, verify_pass, analyze_deps, enable_spike, disable_spike, bypass_tdd, check_context, reset_context, checkpoint, init_session, context_status, context_size, context_health
+from .commands import verify_fail, verify_pass, analyze_deps, enable_spike, disable_spike, bypass_tdd, check_context, reset_context, checkpoint, init_session, context_status, context_size, context_health, run_hooks_cmd
 from .config import ConfigManager
 
 def main():
@@ -39,6 +39,14 @@ def main():
         sys.exit(checkpoint(args))
     elif command == "init":
         sys.exit(init_session(args))
+    elif command == "tick":
+        from .commands import tick
+        sys.exit(tick(args))
+    elif command == "polish":
+        from .commands import polish
+        sys.exit(polish(args))
+    elif command == "hooks":
+        sys.exit(run_hooks_cmd(args))
     elif command == "version":
         print("0.1.0") 
     else:

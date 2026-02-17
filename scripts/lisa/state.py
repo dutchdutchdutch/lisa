@@ -85,16 +85,27 @@ class StateManager:
             return self._default_state
 
     def _save_internal(self, state):
-        """Internal save without locking, using atomic rename."""
+        """Internal save without locking, using atomic rename with fallback."""
         state["lastUpdated"] = time.time()
         
         # Write to temp file first
-        tmp_file = f"{self.state_file}.tmp"
-        with open(tmp_file, "w") as f:
-            json.dump(state, f, indent=2)
-            
-        # Atomic rename
-        os.replace(tmp_file, self.state_file)
+        tmp_file = f"{self.state_file}.temp"
+        try:
+            with open(tmp_file, "w") as f:
+                json.dump(state, f, indent=2)
+                
+            # Atomic rename
+            os.replace(tmp_file, self.state_file)
+        except (PermissionError, OSError) as e:
+            # Fallback: Write directly to state file if temp file/rename fails
+            # This risks corruption but ensures we can write if permissions allow direct write
+            # but block temp file creation/rename (distinction sometimes made by container runtimes)
+            sys.stderr.write(f"[LISA] [WARNING] Atomic save failed ({e}). Attempting direct write...\n")
+            try:
+                with open(self.state_file, "w") as f:
+                    json.dump(state, f, indent=2)
+            except Exception as e2:
+                sys.stderr.write(f"[LISA] [ERROR] Could not save state: {e2}\n")
 
     def load(self):
         """Loads the current state from the state file (thread-safe)."""
@@ -112,3 +123,17 @@ class StateManager:
             current_state = self._load_internal()
             current_state[key] = value
             self._save_internal(current_state)
+
+    def increment_turn(self):
+        """Increments the turn counter transactionally."""
+        with self._get_lock():
+            current_state = self._load_internal()
+            turn = current_state.get("turn_count", 0)
+            new_turn = turn + 1
+            current_state["turn_count"] = new_turn
+            self._save_internal(current_state)
+            return new_turn
+
+    def reset_turn(self):
+        """Resets the turn counter to 0."""
+        self.update("turn_count", 0)

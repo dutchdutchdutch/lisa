@@ -34,7 +34,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 ### Technical Constraints & Dependencies
 *   Must run locally without external services (Phase 1).
-*   Must not require compiled binaries for MVP (Script-based).
+*   **Relaxed Constraint:** "Zero-Dependency" (Standard Library only) was strict for MVP, but now relaxed to allow high-value dependencies like `tiktoken`.
 *   Dependency on user having Python/Node environment (or just Shell).
 
 ### Cross-Cutting Concerns Identified
@@ -237,7 +237,7 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 *   **Workflow Gates (FR1-FR4):** Covered by `lisa.sh` hook logic.
 *   **Context Governance (FR5-FR7):** Covered by `scripts/lisa/commands/check.py`.
 *   **Traffic Light (FR8):** Covered by `main.py`.
-*   **Zero-Dependency (NFR):** Strictly adhered to (only standard library).
+*   **Zero-Dependency (NFR):** Deprecated in Epic 5 to support `tiktoken`. Now "Low-Dependency".
 
 ### Architecture Readiness Assessment
 **Overall Status:** IMPLEMENTATION IN PROGRESS (Epic 3 Complete)
@@ -245,8 +245,9 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 ## Epic 3: Context Governance Architecture
 
 ### Token Analysis Strategy
-*   **Decision:** Heuristic estimation (Chars / 4).
-*   **Rationale:** Speed and zero-dependency (no `tiktoken`). Sufficient accuracy for relative health monitoring.
+*   **Decision:** `tiktoken` (Exact count).
+*   **History:** Originally Heuristic (Chars / 4) for zero-dep.
+*   **Rationale:** Precision is critical for large contexts. "Zero-Dep" constraint relaxed to prioritize reliability.
 *   **Performance:** Recursive file scan with `.gitignore` respect.
 
 ### Context Caching (The Traffic Light)

@@ -67,5 +67,31 @@ class TestContextCommands(unittest.TestCase):
             mock_print.assert_any_call("Saturation:      80% (16000 / 20000 tokens)", status_icon="📈")
             mock_print.assert_any_call("Status:          WARNING (Saturation)", status_icon="rx")
 
+    @patch('scripts.lisa.commands.get_cache_status')
+    @patch('scripts.lisa.commands.ConfigManager')
+    @patch('scripts.lisa.commands.scan_workspace')
+    @patch('scripts.lisa.commands.find_project_root')
+    def test_check_context_output(self, mock_find_root, mock_scan, MockConfig, mock_cache_status):
+        """Should verify check_context output includes disclaimer."""
+        from scripts.lisa.commands import check_context  # Import here to avoid early import issues 
+        
+        mock_find_root.return_value = self.test_dir
+        mock_scan.return_value = (5000, 50)
+        
+        mock_config = {"context_limit": 20000}
+        MockConfig.return_value.load.return_value = mock_config
+        MockConfig.return_value.get.side_effect = mock_config.get
+        
+        # Ensure cache is stale or empty so it triggers a scan
+        mock_cache_status.return_value = {}
+
+        with patch('builtins.print') as mock_print:
+            with patch('scripts.lisa.commands.print_with_status') as mock_status:
+                ret_code = check_context([])
+                self.assertEqual(ret_code, 0)
+                
+                # Check for disclaimer in standard print
+                mock_print.assert_any_call("    Approximation method across models for watchdog purposes. Not billing grade accurate.")
+
 if __name__ == "__main__":
     unittest.main()

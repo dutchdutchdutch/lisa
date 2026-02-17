@@ -10,7 +10,15 @@ class ConfigManager:
         "context_limit": 20000,
         "context_check_interval": 600,
         "external_state_file": "todo.md",
-        "external_state_ttl": 600
+        "external_state_ttl": 600,
+        "hooks_mode": "auto",
+        "lifecycle_hooks": {
+            "story-kickoff": [],
+            "story-in-dev": ["lisa tick"],
+            "story-test": [],
+            "story-complete": ["lisa polish"],
+            "context-reset": ["lisa checkpoint"]
+        }
     }
 
     def __init__(self, user_config_path=None, project_config_path=None, project_root=None):

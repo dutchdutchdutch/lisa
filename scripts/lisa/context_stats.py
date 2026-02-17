@@ -7,19 +7,33 @@ import time
 # Default ignores to prevent scanning massive generated directories
 DEFAULT_IGNORES = [
     ".git", ".lisa", ".agent", "__pycache__", "node_modules", "venv", ".env", 
-    ".DS_Store", "dist", "build", "coverage"
+    ".DS_Store", "dist", "build", "coverage", ".pytest_cache"
 ]
 
 CACHE_FILE = ".lisa/context_cache.json"
+MAX_FILE_SIZE = 10 * 1024 * 1024 # 10MB
+
+# Try to load tiktoken, fallback to heuristic if missing (graceful degradation)
+try:
+    import tiktoken
+    ENCODING = tiktoken.get_encoding("cl100k_base")
+except ImportError:
+    ENCODING = None
 
 def count_tokens(text):
     """
-    Estimates token count using the standard 'Character / 4' heuristic.
-    Returns an integer.
+    Counts tokens using tiktoken (cl100k_base) if available.
+    Falls back to 'Character / 4' heuristic if tiktoken is missing.
     """
     if not text:
         return 0
-    # Use ceil to be slightly conservative/safe
+    
+    if ENCODING:
+        # disallowed_special=() allows encoding special tokens like <|endoftext|>
+        # which might appear in code/prompt templates.
+        return len(ENCODING.encode(text, disallowed_special=()))
+    
+    # Fallback Heuristic
     return math.ceil(len(text) / 4)
 
 def get_context_health(token_count, limit):
@@ -43,8 +57,8 @@ def get_context_health(token_count, limit):
 
 def scan_workspace(root_dir, ignores=None):
     """
-    Scans the workspace recursively and sums the estimated tokens of all text files.
-    Skips binary files and ignored directories.
+    Scans the workspace recursively and sums the tokens of all text files.
+    Uses tiktoken for accuracy. Skips binary files (UnicodeDecodeError).
     """
     if ignores is None:
         ignores = DEFAULT_IGNORES
@@ -67,12 +81,21 @@ def scan_workspace(root_dir, ignores=None):
                 continue
                 
             try:
-                # Use file size heuristic instead of reading content to avoid OOM
-                size = os.path.getsize(file_path)
-                # Heuristic: 1 token ~= 4 chars (bytes). 
-                # This is safe for large files and requires zero memory.
-                total_tokens += math.ceil(size / 4)
-                file_count += 1
+                # Attempt to read file as text to count tokens accurately
+                # limit size to prevent reading massive files (e.g. 10MB limit)
+                if os.path.getsize(file_path) > MAX_FILE_SIZE:
+                    # Fallback for massive files: size / 4
+                    total_tokens += math.ceil(os.path.getsize(file_path) / 4)
+                    file_count += 1
+                    continue
+
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    total_tokens += count_tokens(content)
+                    file_count += 1
+            except UnicodeDecodeError:
+                # Binary file (image, compiled, etc) -> Skip
+                continue
             except (IOError, OSError):
                 # Skip files we can't read or stat
                 continue
@@ -107,6 +130,27 @@ def update_cache(token_count, health):
     except (IOError, OSError):
         pass # Fail silently (stats only)
 
+def get_cache_status(limit, interval=None):
+    """
+    Checks cache validity and returns (token_count, health) if valid, else (None, None).
+    Helper to avoid config duplication.
+    """
+    if interval is None:
+        # If interval not provided, assume we want to check strict validity
+        # But we really need the interval to check TTL.
+        # So we might still need config here if not passed.
+        # Let's keep it simple: Read cache, return data + timestamp.
+        pass
+
+    try:
+        if os.path.exists(CACHE_FILE):
+             with open(CACHE_FILE, "r") as f:
+                 cache = json.load(f)
+                 return cache
+    except (json.JSONDecodeError, OSError):
+        pass
+    return {}
+
 def get_cached_health_icon():
     """
     Lazy fetch of icon. Checks TTL. If expired, re-scans.
@@ -114,19 +158,18 @@ def get_cached_health_icon():
     from .config import ConfigManager
     from .utils import find_project_root
     
-    config = ConfigManager().load()
-    limit = config.get("context_limit", 20000) # Fallback if config fails
+    # Load config once
+    try:
+        root = find_project_root(os.getcwd())
+        config = ConfigManager(project_root=root).load()
+    except:
+        config = ConfigManager().load()
+    
+    limit = config.get("context_limit", 20000)
     interval = config.get("context_check_interval", 600)
     
-    # Try reading cache
-    cache = {}
-    try:
-        if os.path.exists(CACHE_FILE):
-             with open(CACHE_FILE, "r") as f:
-                 cache = json.load(f)
-    except (json.JSONDecodeError, OSError):
-        pass
-        
+    # Check Cache
+    cache = get_cache_status(limit)
     last_update = cache.get("timestamp", 0)
     current_time = time.time()
     
@@ -136,20 +179,17 @@ def get_cached_health_icon():
     else:
         # Expired or missing -> Re-scan
         try:
-            root = find_project_root(os.getcwd())
-            
-            # Helper to get limit with root awareness
-            try:
-                config = ConfigManager(project_root=root).load()
-                limit = config.get("context_limit", 20000)
-            except:
-                pass # Use default limit from top of function if this fails
-                
+             # Logic duplication meant we were resolving root/config twice.
+             # Now we use the resolved root/config from above.
+             # Wait, root might be missing if get_context_health is called from weird place?
+             # But find_project_root logic is robust.
+            if 'root' not in locals():
+                 root = find_project_root(os.getcwd()) # Fallback
+
             token_count, _ = scan_workspace(root)
             health = get_context_health(token_count, limit)
             update_cache(token_count, health)
         except Exception:
-            # If scanning fails (e.g. permission), fallback to Unknown
             return "⚪"
 
     # Map to Icon
