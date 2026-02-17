@@ -11,7 +11,13 @@ from .logger import print_with_status
 from .state import StateManager, LISA_MODES, ContextActivity
 from .hooks import LIFECYCLE_EVENTS, run_hooks, run_story_complete
 from .classifier import classify_file, classify_all, persist_layers, LAYER_UNIT, LAYER_INTEGRATION
-from .scope import derive_modified_files_from_git, derive_scope, persist_scope, load_scope, clear_scope
+from .scope import (
+    derive_modified_files_from_git, derive_scope, persist_scope, load_scope, clear_scope,
+    get_layer_status, update_layer_status, get_in_scope_tests_for_layer,
+    check_layer_advancement, is_file_in_scope, get_all_tests_for_layer,
+    record_deferred_failures, LAYER_ORDER,
+    STATUS_CLEAN, STATUS_FAILING, STATUS_NOT_RUN,
+)
 
 def check_mode_bypass(project_root=None):
     """Checks if current mode allows bypassing verification."""
@@ -49,7 +55,10 @@ def verify_fail(args):
 
     if check_mode_bypass(project_root):
         return 0
-    
+
+    # AC3: Scope-aware warning for explicit files
+    _warn_if_outside_scope(project_root, test_file)
+
     # 1. Verification (Interactive Optional)
     if interactive:
         print(f"File: {test_file}")
@@ -64,11 +73,11 @@ def verify_fail(args):
             return 1
     else:
         print_with_status("Automated Mode (Non-interactive)")
-        
+
     # 2. Automated Fail Verification
     print_with_status(f"Running test (Expecting Failure)...")
     ret_code = run_test(test_file)
-    
+
     if ret_code == 0:
         print_with_status(f"[ERROR] Test Passed! Expected failure (RED state).", status_icon="🔴")
         print_with_status("Please check that the test is actually asserting the new behavior.", status_icon="🔴")
@@ -99,7 +108,10 @@ def verify_pass(args):
 
     if check_mode_bypass(project_root):
         return 0
-    
+
+    # AC3: Scope-aware warning for explicit files
+    _warn_if_outside_scope(project_root, test_file)
+
     # 1. Automated Pass Verification
     print_with_status("Running test (Expecting Success)...")
     ret_code = run_test(test_file)
@@ -877,18 +889,138 @@ def _print_scope(scope):
         print_with_status(f"  {f}")
 
     in_scope = scope.get("in_scope_tests", {})
-    unit_tests = in_scope.get("UNIT", [])
-    integration_tests = in_scope.get("INTEGRATION", [])
+    unit_tests = in_scope.get(LAYER_UNIT, [])
+    integration_tests = in_scope.get(LAYER_INTEGRATION, [])
 
     print("")
-    print_with_status(f"In-Scope Tests — UNIT: {len(unit_tests)}", status_icon="🧪")
+    print_with_status(f"In-Scope Tests — {LAYER_UNIT}: {len(unit_tests)}", status_icon="🧪")
     for t in unit_tests:
         print_with_status(f"  {t}")
 
-    print_with_status(f"In-Scope Tests — INTEGRATION: {len(integration_tests)}", status_icon="🔗")
+    print_with_status(f"In-Scope Tests — {LAYER_INTEGRATION}: {len(integration_tests)}", status_icon="🔗")
     for t in integration_tests:
         print_with_status(f"  {t}")
 
     total = len(unit_tests) + len(integration_tests)
     print("")
     print_with_status(f"Total in-scope tests: {total}", status_icon="📊")
+
+
+def _warn_if_outside_scope(project_root, test_file):
+    """Emit a warning if the test file is outside the current story scope (AC3)."""
+    in_scope = is_file_in_scope(project_root, test_file)
+    if in_scope is False:
+        print_with_status(
+            f"Warning: '{test_file}' is outside the current story scope.",
+            status_icon="⚠️"
+        )
+
+
+def verify_layer(args):
+    """
+    Runs scoped verification for a specific test layer.
+    Usage: lisa verify-layer <unit|integration>
+    """
+    if not args:
+        print_with_status("Usage: lisa verify-layer <unit|integration>", status_icon="🔴")
+        return 1
+
+    layer = args[0].upper()
+    if layer not in LAYER_ORDER:
+        print_with_status(f"Error: Unknown layer '{args[0]}'. Use 'unit' or 'integration'.", status_icon="🔴")
+        return 1
+
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
+        return 1
+
+    if check_mode_bypass(project_root):
+        return 0
+
+    # No-scope fallback
+    in_scope_tests = get_in_scope_tests_for_layer(project_root, layer)
+    if in_scope_tests is None:
+        print_with_status("No scope is set. Use 'lisa scope' to set scope first.", status_icon="⚠️")
+        return 1
+
+    # Layer advancement check
+    allowed, reason = check_layer_advancement(project_root, layer)
+    if not allowed:
+        print_with_status(f"Layer gate blocked: {reason}", status_icon="🔴")
+        return 1
+
+    # Determine test set: all classified tests if available, else in-scope only
+    all_tests = get_all_tests_for_layer(project_root, layer)
+    tests = all_tests if all_tests is not None else in_scope_tests
+    in_scope_set = set(in_scope_tests)
+
+    if not tests:
+        print_with_status(f"No in-scope {layer} tests to run.", status_icon="ℹ️")
+        update_layer_status(project_root, layer, STATUS_CLEAN)
+        record_deferred_failures(project_root, layer, [])
+        return 0
+
+    print_with_status(f"Scoped Verification: {layer} Layer ({len(tests)} tests)")
+    print("---------------------------------------------------")
+
+    in_scope_failures = []
+    out_of_scope_failures = []
+    for test_file in tests:
+        print_with_status(f"  Running: {test_file}")
+        ret_code = run_test(test_file)
+        if ret_code != 0:
+            if test_file in in_scope_set:
+                in_scope_failures.append(test_file)
+            else:
+                out_of_scope_failures.append(test_file)
+
+    # Record deferred failures (AC4)
+    record_deferred_failures(project_root, layer, out_of_scope_failures)
+
+    # Display in-scope failures (main output)
+    if in_scope_failures:
+        update_layer_status(project_root, layer, STATUS_FAILING)
+        print_with_status(f"{layer} Layer: {len(in_scope_failures)} in-scope failure(s).", status_icon="🔴")
+        for f in in_scope_failures:
+            print_with_status(f"  FAILED: {f}", status_icon="🔴")
+    else:
+        update_layer_status(project_root, layer, STATUS_CLEAN)
+        print_with_status(f"{layer} Layer: All in-scope tests passed.", status_icon="🟢")
+
+    # Display out-of-scope failures in deferred section (AC2)
+    if out_of_scope_failures:
+        print_with_status(f"Deferred Failures ({len(out_of_scope_failures)} outside story scope — do not fix):", status_icon="⚠️")
+        for f in out_of_scope_failures:
+            print_with_status(f"  DEFERRED: {f}", status_icon="⚠️")
+
+    # AC3: Only in-scope failures block layer progression
+    return 1 if in_scope_failures else 0
+
+
+def layer_status_cmd(args):
+    """
+    Displays the current status of each test layer.
+    Usage: lisa layer-status
+    """
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
+        return 1
+
+    status = get_layer_status(project_root)
+    if status is None:
+        print_with_status("No scope is set. Layer status is not available.", status_icon="ℹ️")
+        return 0
+
+    print_with_status("Layer Status")
+    print("---------------------------------------------------")
+
+    for layer_name in LAYER_ORDER:
+        layer_state = status.get(layer_name, STATUS_NOT_RUN)
+        icon = "🟢" if layer_state == STATUS_CLEAN else "🔴" if layer_state == STATUS_FAILING else "⬜"
+        print_with_status(f"  {layer_name}: {layer_state}", status_icon=icon)
+
+    return 0

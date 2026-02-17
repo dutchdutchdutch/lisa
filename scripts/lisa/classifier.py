@@ -9,6 +9,8 @@ import json
 import os
 import fnmatch
 
+from .utils import DEFAULT_IGNORES
+
 LAYER_UNIT = "UNIT"
 LAYER_INTEGRATION = "INTEGRATION"
 
@@ -23,8 +25,6 @@ _SUBTYPE_KEYWORDS = {
     "pact": SUBTYPE_PACT,
     "component": SUBTYPE_COMPONENT,
 }
-
-DEFAULT_IGNORES = [".git", ".lisa", "__pycache__", "node_modules", "venv", ".env", ".agent"]
 
 
 def discover_test_files(project_root):

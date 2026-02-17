@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+DEFAULT_IGNORES = [".git", ".lisa", "__pycache__", "node_modules", "venv", ".env", ".agent"]
+
 def find_project_root(start_path: str = None) -> str:
     """
     Finds the project root by looking for marker files/directories

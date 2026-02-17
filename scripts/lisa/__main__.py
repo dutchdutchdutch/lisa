@@ -1,5 +1,10 @@
 import sys
-from .commands import verify_fail, verify_pass, analyze_deps, enable_spike, disable_spike, bypass_tdd, check_context, reset_context, checkpoint, init_session, context_status, context_size, context_health, run_hooks_cmd
+from .commands import (
+    verify_fail, verify_pass, analyze_deps, enable_spike, disable_spike,
+    bypass_tdd, check_context, reset_context, checkpoint, init_session,
+    context_status, context_size, context_health, run_hooks_cmd,
+    turns, polish, refactor, classify, scope_cmd, verify_layer, layer_status_cmd,
+)
 from .config import ConfigManager
 from .state import StateManager
 from .utils import find_project_root
@@ -50,22 +55,21 @@ def main():
     elif command == "init":
         sys.exit(init_session(args))
     elif command == "turns":
-        from .commands import turns
         sys.exit(turns(args))
     elif command == "polish":
-        from .commands import polish
         sys.exit(polish(args))
     elif command == "refactor":
-        from .commands import refactor
         sys.exit(refactor(args))
     elif command == "hooks":
         sys.exit(run_hooks_cmd(args))
     elif command == "classify":
-        from .commands import classify
         sys.exit(classify(args))
     elif command == "scope":
-        from .commands import scope_cmd
         sys.exit(scope_cmd(args))
+    elif command == "verify-layer":
+        sys.exit(verify_layer(args))
+    elif command == "layer-status":
+        sys.exit(layer_status_cmd(args))
     elif command == "version":
         print("0.1.0") 
     else:

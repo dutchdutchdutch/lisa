@@ -3,13 +3,19 @@
 Computes the dependency cone for modified source files, maps to in-scope
 test files grouped by layer, and persists the scope for downstream use.
 """
+import ast
 import json
 import os
 import subprocess
 import time
 
 from .analysis import find_importers, get_module_name
-from .classifier import load_layers
+from .classifier import load_layers, LAYER_UNIT, LAYER_INTEGRATION
+
+# Layer status values (used in scope.json layer_status and by verify-layer)
+STATUS_CLEAN = "CLEAN"
+STATUS_FAILING = "FAILING"
+STATUS_NOT_RUN = "NOT_RUN"
 
 
 def derive_modified_files_from_git(project_root, base_branch="main"):
@@ -67,20 +73,11 @@ def compute_dependency_cone(modified_files, project_root):
     return sorted(cone)
 
 
-def _test_imports_cone_module(test_file, cone, project_root):
+def _test_imports_cone_module(test_file, cone_modules, project_root):
     """Check if a test file imports any module in the dependency cone."""
-    import ast
-
     abs_test = os.path.join(project_root, test_file)
     if not os.path.exists(abs_test):
         return False
-
-    # Build set of module names from cone
-    cone_modules = set()
-    for f in cone:
-        mod = get_module_name(os.path.join(project_root, f), project_root)
-        if mod:
-            cone_modules.add(mod)
 
     try:
         with open(abs_test, "r", encoding="utf-8") as f:
@@ -108,15 +105,22 @@ def find_in_scope_tests(dependency_cone, classifications, project_root):
 
     Returns dict with UNIT and INTEGRATION lists of in-scope test file paths.
     """
-    result = {"UNIT": [], "INTEGRATION": []}
+    result = {LAYER_UNIT: [], LAYER_INTEGRATION: []}
 
     if not dependency_cone or not classifications:
         return result
 
+    # optimization: pre-calculate cone modules once
+    cone_modules = set()
+    for f in dependency_cone:
+        mod = get_module_name(os.path.join(project_root, f), project_root)
+        if mod:
+            cone_modules.add(mod)
+
     for entry in classifications:
         test_file = entry["file"]
-        layer = entry.get("layer", "UNIT")
-        if _test_imports_cone_module(test_file, dependency_cone, project_root):
+        layer = entry.get("layer", LAYER_UNIT)
+        if _test_imports_cone_module(test_file, cone_modules, project_root):
             if layer in result:
                 result[layer].append(test_file)
 
@@ -175,3 +179,121 @@ def clear_scope(project_root):
         return False
     os.remove(scope_path)
     return True
+
+
+# --- Layer Gate (Story 7.3) ---
+
+LAYER_ORDER = [LAYER_UNIT, LAYER_INTEGRATION]
+
+
+def get_layer_status(project_root):
+    """Get current layer status from scope. Returns dict or None if no scope."""
+    scope = load_scope(project_root)
+    if scope is None:
+        return None
+    status = scope.get("layer_status", {})
+    return {
+        LAYER_UNIT: status.get(LAYER_UNIT, STATUS_NOT_RUN),
+        LAYER_INTEGRATION: status.get(LAYER_INTEGRATION, STATUS_NOT_RUN),
+    }
+
+
+def update_layer_status(project_root, layer, status):
+    """Update the status for a specific layer in the persisted scope."""
+    scope = load_scope(project_root)
+    if scope is None:
+        return
+    if "layer_status" not in scope:
+        scope["layer_status"] = {}
+    scope["layer_status"][layer] = status
+    persist_scope(project_root, scope)
+
+
+def get_in_scope_tests_for_layer(project_root, layer):
+    """Get the in-scope test files for a specific layer.
+
+    Returns list of test file paths, or None if no scope is set.
+    """
+    scope = load_scope(project_root)
+    if scope is None:
+        return None
+    in_scope = scope.get("in_scope_tests", {})
+    return in_scope.get(layer, [])
+
+
+def check_layer_advancement(project_root, target_layer):
+    """Check if the agent can advance to the target layer.
+
+    Returns (allowed: bool, reason: str). reason is empty if allowed.
+    UNIT is always allowed. INTEGRATION requires UNIT to be CLEAN (or empty).
+    """
+    scope = load_scope(project_root)
+    if scope is None:
+        return False, "No scope is set. Use 'lisa scope' to set scope first."
+
+    if target_layer == LAYER_UNIT:
+        return True, ""
+
+    if target_layer == LAYER_INTEGRATION:
+        # If no UNIT tests in scope, nothing to block on
+        in_scope = scope.get("in_scope_tests", {})
+        unit_tests = in_scope.get(LAYER_UNIT, [])
+        if not unit_tests:
+            return True, ""
+
+        status = scope.get("layer_status", {})
+        unit_status = status.get(LAYER_UNIT, STATUS_NOT_RUN)
+        if unit_status == STATUS_CLEAN:
+            return True, ""
+        return False, f"UNIT layer is not clean (status: {unit_status}). Resolve unit failures before integration testing."
+
+    return False, f"Unknown layer: {target_layer}"
+
+
+def is_file_in_scope(project_root, test_file):
+    """Check if a specific test file is within the current scope.
+
+    Returns True if in scope, False if out of scope, None if no scope is set.
+    """
+    scope = load_scope(project_root)
+    if scope is None:
+        return None
+    in_scope = scope.get("in_scope_tests", {})
+    all_in_scope = in_scope.get(LAYER_UNIT, []) + in_scope.get(LAYER_INTEGRATION, [])
+    return test_file in all_in_scope
+
+
+# --- Out-of-Scope Failure Deferral (Story 7.4) ---
+
+
+def get_all_tests_for_layer(project_root, layer):
+    """Get every classified test file for a layer from layers.json.
+
+    Returns list of test file paths, or None if layers.json is missing.
+    """
+    classifications = load_layers(project_root)
+    if classifications is None:
+        return None
+    return [entry["file"] for entry in classifications if entry.get("layer") == layer]
+
+
+def record_deferred_failures(project_root, layer, failures):
+    """Persist out-of-scope failures into scope.json under deferred_failures."""
+    scope = load_scope(project_root)
+    if scope is None:
+        return
+    if "deferred_failures" not in scope:
+        scope["deferred_failures"] = {}
+    scope["deferred_failures"][layer] = list(failures)
+    persist_scope(project_root, scope)
+
+
+def get_deferred_failures(project_root):
+    """Retrieve deferred failures from scope.json.
+
+    Returns dict of {layer: [file, ...]} or None if no scope is set.
+    """
+    scope = load_scope(project_root)
+    if scope is None:
+        return None
+    return scope.get("deferred_failures", {})

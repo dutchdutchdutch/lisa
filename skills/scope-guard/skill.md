@@ -47,6 +47,74 @@ When asked to derive scope:
 
 Run `lisa scope --clear` to remove the scope and return to unscoped operation. This is useful when starting a new story or when scope is no longer relevant.
 
+## Scoped Verification (Layer Gate)
+
+Once a scope is set, verification runs only in-scope tests for the current layer. This prevents out-of-scope failures from entering the agent's context and triggering tangent spirals.
+
+### Layer Progression
+
+Think step by step:
+
+1. **Start at UNIT.** When verification runs with a scope, only in-scope UNIT tests execute first.
+2. **UNIT must be clean.** If any in-scope UNIT test fails, LISA blocks advancement to INTEGRATION. Fix unit failures first.
+3. **Advance to INTEGRATION.** Once UNIT is clean, run `lisa verify-layer integration` to execute only in-scope INTEGRATION tests.
+4. **Layer status is tracked.** Each layer is in one of three states: `CLEAN` (all in-scope tests pass), `FAILING` (N failures), or `NOT_RUN`.
+
+### Layer Status Schema
+
+Layer status is persisted in `.lisa/scope.json` alongside the scope data:
+
+```json
+{
+  "layer_status": {
+    "UNIT": "CLEAN",
+    "INTEGRATION": "NOT_RUN"
+  }
+}
+```
+
+### Backwards Compatibility
+
+- If a specific test file is passed to `lisa verify-fail` or `lisa verify-pass`, the explicit file is always allowed (existing behavior preserved).
+- If the explicit file is outside the current story scope, a warning is emitted: "file is outside story scope."
+
+### No-Scope Fallback
+
+- If no scope has been set and `lisa verify-layer` is called without a specific file, LISA warns: "No scope set. Use 'lisa scope' to set scope first." and does NOT run tests. This is a fail-safe — running all tests without scope defeats the purpose.
+
+## Out-of-Scope Failure Deferral
+
+When `lisa verify-layer` runs, it executes **all** classified tests for the layer (not just in-scope tests). Failures are then classified:
+
+- **IN_SCOPE**: The test file is in the scope's `in_scope_tests` for the current layer. These failures **block** the layer and must be fixed.
+- **OUT_OF_SCOPE**: The test file is classified for the layer but is **not** in the current story's scope. These failures are **deferred** — they do not block the layer.
+
+### Agent Instructions for Deferred Failures
+
+Think step by step:
+
+1. **Only fix in-scope failures.** When `verify-layer` reports deferred failures, note them but do **not** fix them. They are outside the current story's scope.
+2. **Do not chase tangents.** Deferred failures exist to prevent the Tangent Spiral Tax. Investigating or fixing them burns tokens on unrelated work.
+3. **Check the deferral record.** Deferred failures are persisted in `.lisa/scope.json` under `deferred_failures` for each layer. They appear in confidence reports (Story 8.3) as "Known deferred failures."
+
+### Deferral Record Schema
+
+Deferred failures are persisted alongside scope data in `.lisa/scope.json`:
+
+```json
+{
+  "deferred_failures": {
+    "UNIT": ["tests/test_unrelated.py"],
+    "INTEGRATION": []
+  }
+}
+```
+
+### Fallback Behavior
+
+- If `layers.json` is missing, `verify-layer` falls back to running only in-scope tests (no deferral classification possible).
+- If no scope is set, `verify-layer` warns and does not run (unchanged behavior).
+
 ## Warnings
 
 - If no modified files are found from version control, warn the user and do not set scope.

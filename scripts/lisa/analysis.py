@@ -2,7 +2,7 @@ import ast
 import os
 from pathlib import Path
 
-DEFAULT_IGNORES = [".git", ".lisa", "__pycache__", "node_modules", "venv", ".env"]
+from .utils import DEFAULT_IGNORES
 
 def get_module_name(file_path, project_root):
     """
