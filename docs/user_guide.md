@@ -175,15 +175,18 @@ LISA uses a hierarchical configuration system.
 
 **Purpose**: Manages the agentic turn counter. Used by the Turn Watchdog to track reasoning cycles and detect logic drift.
 
+**Auto-tracking**: Turns are automatically incremented once per agent response cycle. Every invocation of any `lisa` command triggers a deduplication check — if the current epoch second differs from the last auto-increment, the counter advances by 1. Multiple `lisa` commands within the same response (same second) count as a single turn.
+
 **Usage**:
 
 ```bash
-./lisa.sh turns          # Report current turn count
-./lisa.sh turns 7        # Set turn to 7 (agent knows its own turn)
+./lisa.sh turns          # Report current turn count (auto-tracked)
+./lisa.sh turns 7        # Explicitly set turn to 7 (overrides auto-tracking)
 ```
 
 *   **Report mode** (no args): Shows current turn count.
-*   **Set mode** (`lisa turns <N>`): Sets the turn counter to the exact number — the agent always knows what turn it's on, so it sets rather than blindly incrementing.
+*   **Set mode** (`lisa turns <N>`): Explicitly sets the turn counter — overrides the auto-tracked value.
+*   **Auto-tracking**: The counter increments automatically on each agent response, so agents no longer need to explicitly call `lisa turns <N>` for tracking to work. Unstructured or exploratory sessions are covered by default.
 *   The turn count is displayed in `lisa context` output.
 *   **Turn 12 (Goldfish Threshold):** Triggers a "Logic Alignment Check".
 *   **Turn 20+ (Compaction Recovery):** Recommends a "Grounding Snapshot".
@@ -231,7 +234,7 @@ LISA uses a hierarchical configuration system.
 | Event | Default Hook | Description |
 |-------|-------------|-------------|
 | `story-kickoff` | (none) | When a story starts |
-| `story-in-dev` | `lisa turns` | Each development turn |
+| `story-in-dev` | `lisa turns` | Each development turn (turn auto-tracked) |
 | `story-test` | `lisa refactor` | After green phase (Refactor Gate) |
 | `story-complete` | `lisa polish` | Story marked complete (also runs health + remediation) |
 | `context-reset` | `lisa checkpoint` | After context reset |

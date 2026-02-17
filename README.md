@@ -27,7 +27,7 @@ The Externalizer skill in particular has no Claude Code equivalent. It addresses
 
 1.  Copy `lisa.sh` to your project root.
 2.  Copy `scripts/lisa` to `scripts/lisa`.
-3.  Install dependencies: `pip install tiktoken` (required for accurate token counting).
+3.  Install dependencies: `pip install tiktoken` (without tiktoken, LISA falls back to characters/4 as a proxy).
 
 For detailed installation instructions, see the [User Guide](docs/user_guide.md#installation).
 
@@ -43,7 +43,7 @@ Run LISA commands via the shell wrapper:
 
 ## Lifecycle Stages
 
-LISA monitors five story lifecycle stages. Each stage can trigger hooks and skills automatically.
+LISA monitors along common story or task lifecycle stages. Each stage can trigger hooks and skills automatically.
 
 | Stage | Default Hook / Skill | Description |
 |-------|---------------------|-------------|
@@ -83,7 +83,7 @@ LISA proactively monitors your prompt context window usage using **tiktoken** fo
 
 ### Turn Watchdog
 Tracks discrete agentic reasoning cycles to detect logic drift before context decay sets in.
--   **Tick:** Run `lisa turns` to increment the turn counter after each reasoning cycle.
+-   **Turns:** Run `lisa turns` to increment the turn counter after each reasoning cycle.
 -   **Goldfish Threshold:** At turn 12, a "Logic Alignment Check" is triggered.
 -   **Compaction Recovery:** At turn 20+, a "Grounding Snapshot" is recommended.
 

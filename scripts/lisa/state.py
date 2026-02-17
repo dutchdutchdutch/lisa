@@ -180,9 +180,35 @@ class StateManager:
             self._save_internal(current_state)
             return new_turn
 
+    def auto_increment_turn(self):
+        """Auto-increments the turn counter once per response cycle.
+
+        Uses epoch-second timestamp to deduplicate: multiple LISA commands
+        within the same second (i.e., the same agent response) only increment once.
+
+        Returns True if increment happened, False if deduplicated.
+        """
+        with self._get_lock():
+            current_state = self._load_internal()
+            current_ts = int(time.time())
+            last_ts = current_state.get("last_auto_increment_ts", 0)
+
+            if current_ts == last_ts:
+                return False
+
+            turn = current_state.get("turn_count", 0)
+            current_state["turn_count"] = turn + 1
+            current_state["last_auto_increment_ts"] = current_ts
+            self._save_internal(current_state)
+            return True
+
     def reset_turn(self):
-        """Resets the turn counter to 0."""
-        self.update("turn_count", 0)
+        """Resets the turn counter and auto-increment marker to 0."""
+        with self._get_lock():
+            current_state = self._load_internal()
+            current_state["turn_count"] = 0
+            current_state.pop("last_auto_increment_ts", None)
+            self._save_internal(current_state)
 
     def diagnose(self):
         """Check state storage health. Returns dict with diagnosis."""

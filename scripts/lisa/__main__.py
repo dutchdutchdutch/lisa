@@ -1,16 +1,26 @@
 import sys
 from .commands import verify_fail, verify_pass, analyze_deps, enable_spike, disable_spike, bypass_tdd, check_context, reset_context, checkpoint, init_session, context_status, context_size, context_health, run_hooks_cmd
 from .config import ConfigManager
+from .state import StateManager
+from .utils import find_project_root
 
 def main():
     """Main entry point for LISA Python CLI."""
     if len(sys.argv) < 2:
         print("Usage: lisa [command] [args...]")
         sys.exit(1)
-        
+
     command = sys.argv[1]
     args = sys.argv[2:]
-    
+
+    # Auto-increment turn counter once per response cycle (Story 5.9)
+    try:
+        project_root = find_project_root()
+        state_manager = StateManager(project_root=project_root)
+        state_manager.auto_increment_turn()
+    except Exception:
+        pass  # Fail-open: don't block commands if auto-increment fails
+
     # Dispatch
     if command == "verify-fail":
         sys.exit(verify_fail(args))
