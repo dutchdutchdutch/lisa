@@ -2,6 +2,27 @@
 
 LISA is a context governance tool for AI-assisted development. It enforces a Red-Green-Refactor loop locally, manages context window health, and prevents premature commits without tests.
 
+Coding agents in complex domains lack enforced boundaries — a gap that disproportionately impacts vibe coders and less experienced developers. Best practices like keeping contexts small are well-documented but easily forgotten once project complexity scales.
+
+Without hard constraints, agents treat accessibility as permission: running full test suites or noisy UI simulations on every turn, burning context on unrelated failures, and confidently solving the wrong problem. The result is lengthy and expensive debugging spirals that compound rather than converge.
+
+
+#### Lisa's Role is complementary
+
+Lisa is a governance layer on top of Claude Code (or other coding agents), not a replacement.
+
+- **Claude Code** handles mechanical compression when the context window fills (~83.5% capacity).
+- **Lisa** adds structured discipline: tracking turns, detecting drift, checkpointing state *before* compaction can lose it, and archiving sessions for post-mortems.
+
+Lisa treats context as an economic resource — monitoring ROI per token — rather than a technical buffer that gets silently recycled. It addresses a failure mode that compaction alone can't: logic drift that occurs even with plenty of tokens remaining.
+
+#### What Lisa Does Differently
+
+Claude Code's compaction asks the model to summarize well. Lisa defines explicit rules for what survives, what gets dropped, and what gets pinned — then separately writes critical state to disk so a lossy summary can't kill the session.
+
+The Externalizer skill in particular has no Claude Code equivalent. It addresses a concrete failure mode: compaction summaries that silently drop important context with no way to recover it.
+
+
 ## Installation
 
 1.  Copy `lisa.sh` to your project root.
