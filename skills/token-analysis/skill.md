@@ -41,10 +41,12 @@ The command returns one of three statuses:
 
 ## Configuration
 
-The default limit is 8000 tokens. This can be configured in `.lisa/config.json`:
+The `context_limit` in `.lisa/config.json` defines the usable token budget. It defaults to **160,000 tokens** (~80% of the 200K model context window). The remaining ~20% is reserved as buffer for context management tasks (compaction, summarization) and any last-minute remediations.
 
 ```json
 {
-  "context_limit": 16000
+  "context_limit": 160000
 }
 ```
+
+**Note:** Avoid setting `context_limit` to the full model context window. The buffer ensures LISA and the agent have room to perform compaction and recovery actions before the hard limit is reached.

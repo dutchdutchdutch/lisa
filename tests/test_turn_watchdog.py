@@ -59,7 +59,7 @@ class TestTurnWatchdog(unittest.TestCase):
         """Should display turn count and correct status icon."""
         # Setup Mocks
         mock_scan.return_value = (500, 5) # Low tokens
-        mock_config = {"context_limit": 20000}
+        mock_config = {"context_limit": 160000}
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
         
@@ -79,7 +79,7 @@ class TestTurnWatchdog(unittest.TestCase):
         mock_scan.return_value = (500, 5)
         
         # Test 1: Default Thresholds (12, 20)
-        config_default = {"context_limit": 20000} # defaults used
+        config_default = {"context_limit": 160000} # defaults used
         MockConfig.return_value.load.return_value = config_default
         MockConfig.return_value.get.side_effect = lambda k, d=None: config_default.get(k, d)
         
@@ -103,7 +103,7 @@ class TestTurnWatchdog(unittest.TestCase):
 
         # Test 2: Custom Thresholds (e.g. Warning 5, Limit 10)
         config_custom = {
-            "context_limit": 20000, 
+            "context_limit": 160000, 
             "turn_warning_threshold": 5, 
             "turn_limit": 10
         }

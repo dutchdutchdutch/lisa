@@ -1,7 +1,7 @@
 {
     "strictness": "strict",
     "spike_mode_allowed": true,
-    "context_limit": 200000,
+    "context_limit": 160000,
     "context_check_interval": 600,
     "turn_warning_threshold": 12,
     "turn_limit": 20

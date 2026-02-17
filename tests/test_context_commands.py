@@ -50,21 +50,21 @@ class TestContextCommands(unittest.TestCase):
     def test_context_health(self, mock_find_root, mock_scan, MockConfig):
         """Should verify context health report."""
         mock_find_root.return_value = self.test_dir
-        mock_scan.return_value = (16000, 20) # 80% saturation
-        
+        mock_scan.return_value = (128000, 20) # 80% saturation
+
         # Mock Config
-        mock_config = {"context_limit": 20000}
+        mock_config = {"context_limit": 160000}
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
-        
+
         with patch('scripts.lisa.commands.print_with_status') as mock_print:
             # We mock DriftDetector implicitly via the module import inside the function
             # But simpler here is to let it run since it's deterministic
             ret_code = context_health([])
             self.assertEqual(ret_code, 0)
-            # 16000 / 20000 = 80% -> WARNING (Saturation)
-            # Saturation: 80% (16000 / 20000 tokens)
-            mock_print.assert_any_call("Saturation:      80% (16000 / 20000 tokens)", status_icon="📈")
+            # 128000 / 160000 = 80% -> WARNING (Saturation)
+            # Saturation: 80% (128000 / 160000 tokens)
+            mock_print.assert_any_call("Saturation:      80% (128000 / 160000 tokens)", status_icon="📈")
             mock_print.assert_any_call("Status:          WARNING (Saturation)", status_icon="rx")
 
     @patch('scripts.lisa.commands.get_cache_status')
@@ -78,10 +78,10 @@ class TestContextCommands(unittest.TestCase):
         mock_find_root.return_value = self.test_dir
         mock_scan.return_value = (5000, 50)
         
-        mock_config = {"context_limit": 20000}
+        mock_config = {"context_limit": 160000}
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
-        
+
         # Ensure cache is stale or empty so it triggers a scan
         mock_cache_status.return_value = {}
 

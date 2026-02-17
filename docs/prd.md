@@ -31,6 +31,35 @@ LISA is not a new agent, but a **deployable context governance plugin** (via `de
 2.  **Isolated Incubation:** Failures are fixed only at the layer they occur, preventing higher-order noise from entering the context.
 3.  **Selective Scope:** The agent is explicitly forbidden from fixing out-of-scope errors.
 
+
+#### Comparison to Existing Approaches
+
+The Real Differences from Claude Code
+| 	| Claude Code	| LISA |
+|---|---|---|
+|Compaction approach	|Model-driven summarization of raw messages, replacing conversation history at the API level |  Skill-driven protocol with explicit rules about what to keep/discard/pin — operates at the agent reasoning level |
+|What survives	|Whatever the model deems important during summarization | Explicitly defined: ADRs, state changes, pending tasks, current mode, current task |
+|External memory	|Persistent memory directory (~/.claude/projects/*/memory/) — optional, manual | todo.md as mandatory working heap with freshness validation and read/write protocol |
+|Compaction + state preservation	|Single action (summarize) | Two-step: compress history AND externalize state to disk — belt and suspenders |
+|Turn-based decay	|Not tracked	| Goldfish Threshold (turn 12) and Compaction Recovery (turn 20) — catches logic drift independent of token count |
+|Lifecycle integration	|Compaction is reactive (triggered by token pressure) | Compaction is event-driven — tied to story completion, not just token thresholds |
+|Customizability |/compact preserve the API patterns — freeform natural language | Deterministic protocol with fixed rules (keep ADRs, discard resolved debug chatter, pin mode+task) |
+|Post-compaction hygiene |	None — trusts the summary | Polish Pass audits for cross-story drift (naming divergence, duplicated utilities, inconsistent error handling) that accumulates across compaction boundaries |
+
+#### Where They Complement Each Other
+Lisa is designed as a governor layer on top of Claude Code or other coding agent, not a replacement. The combination gives you:
+
+Claude Code handles the mechanical compression when context fills
+Lisa adds the discipline layer: tracking turns, detecting drift, ensuring state is checkpointed before compaction can lose it, and archiving sessions for post-mortems
+The unique value of Lisa is treating context as an economic resource — monitoring ROI on every token — rather than a technical buffer that gets automatically recycled. It addresses the failure mode that Claude Code's compaction can't: logic drift that happens even with plenty of tokens remaining.
+
+
+#### Lisa's Unique Value
+The real differentiator is its structured discipline vs best-effort intelligence. Claude Code's compaction says "model, please summarize well." Lisa's says "here are the exact rules for what survives, what dies, and what gets pinned — and separately, write the critical bits to disk so even a bad summary can't kill the session." The Externalizer skill in particular has no Claude Code equivalent and addresses a real failure mode: compaction summaries that silently drop important context.
+
+
+
+
 ## Target Users
 
 ### Primary Users

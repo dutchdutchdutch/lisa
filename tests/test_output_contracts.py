@@ -39,7 +39,7 @@ class TestContextHealthOutputContract(unittest.TestCase):
         mock_root.return_value = self.test_dir
         mock_scan.return_value = (10000, 20)
 
-        mock_config = {"context_limit": 20000, "turn_warning_threshold": 12, "turn_limit": 20}
+        mock_config = {"context_limit": 160000, "turn_warning_threshold": 12, "turn_limit": 20}
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
 
@@ -68,7 +68,7 @@ class TestContextHealthOutputContract(unittest.TestCase):
         """Turn count below warning threshold should use green icon."""
         mock_root.return_value = self.test_dir
         mock_scan.return_value = (5000, 10)
-        mock_config = {"context_limit": 20000, "turn_warning_threshold": 12, "turn_limit": 20}
+        mock_config = {"context_limit": 160000, "turn_warning_threshold": 12, "turn_limit": 20}
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
 
@@ -92,7 +92,7 @@ class TestContextHealthOutputContract(unittest.TestCase):
 
         mock_root.return_value = self.test_dir
         mock_scan.return_value = (5000, 10)
-        mock_config = {"context_limit": 20000, "turn_warning_threshold": 12, "turn_limit": 20}
+        mock_config = {"context_limit": 160000, "turn_warning_threshold": 12, "turn_limit": 20}
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
 
@@ -113,7 +113,7 @@ class TestContextHealthOutputContract(unittest.TestCase):
 
         mock_root.return_value = self.test_dir
         mock_scan.return_value = (5000, 10)
-        mock_config = {"context_limit": 20000, "turn_warning_threshold": 12, "turn_limit": 20}
+        mock_config = {"context_limit": 160000, "turn_warning_threshold": 12, "turn_limit": 20}
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
 

@@ -7,7 +7,7 @@ class ConfigManager:
     _DEFAULTS = {
         "strictness": "strict",
         "spike_mode_allowed": True,
-        "context_limit": 20000,
+        "context_limit": 160000,
         "context_check_interval": 600,
         "external_state_file": "todo.md",
         "external_state_ttl": 600,

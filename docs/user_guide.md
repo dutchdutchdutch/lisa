@@ -28,7 +28,7 @@ LISA uses a hierarchical configuration system.
 {
   "strictness": "strict",
   "spike_mode_allowed": true,
-  "context_limit": 20000,
+  "context_limit": 160000,
   "context_check_interval": 600,
   "hooks_mode": "auto",
   "lifecycle_hooks": {
@@ -47,10 +47,12 @@ LISA uses a hierarchical configuration system.
 |-----|---------|-------------|
 | `strictness` | `"strict"` | TDD enforcement level |
 | `spike_mode_allowed` | `true` | Whether spike mode is permitted |
-| `context_limit` | `20000` | Token threshold for context alerts |
+| `context_limit` | `160000` | Token threshold for context alerts (~80% of model context window) |
 | `context_check_interval` | `600` | Seconds between lazy context checks |
 | `hooks_mode` | `"auto"` | `"auto"` runs remediation automatically; `"interactive"` prompts first |
 | `lifecycle_hooks` | (see above) | Map of lifecycle events to LISA commands |
+
+> **Recommendation:** Avoid setting `context_limit` to the full model context window (e.g., 200K). LISA recommends reserving ~20% as buffer for context management tasks (compaction, summarization) and last-minute remediations. The default of 160,000 reflects ~80% of a 200K context window.
 
 ## Commands
 
