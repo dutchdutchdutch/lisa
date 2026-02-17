@@ -4,6 +4,7 @@ import os
 import fcntl
 import time
 import hashlib
+import shutil
 import tempfile
 from contextlib import contextmanager
 
@@ -21,7 +22,11 @@ class ContextActivity:
     ARCHIVING = "archiving"
 
 class StateManager:
+    _fallback_warned = set()  # Once-per-process warning per project root
+
     def __init__(self, state_file=None, project_root=None):
+        self.project_root = project_root
+        self.using_fallback = False
         if state_file:
              self.state_file = state_file
         elif project_root:
@@ -30,12 +35,10 @@ class StateManager:
                  self.state_file = primary
              else:
                  self.state_file = self._fallback_path(project_root)
-                 sys.stderr.write(
-                     f"[LISA] [INFO] State file not writable at .lisa/state.json — "
-                     f"using fallback: {self.state_file}\n"
-                 )
+                 self.using_fallback = True
         else:
-             # Fallback default (fragile if not at root, but keeps backward compat)
+             # Legacy: relative path, no project_root set. diagnose() may report
+             # healthy but repair() requires project_root. No current callers use this path.
              self.state_file = ".lisa/state.json"
              
         self.lock_file = f"{self.state_file}.lock"
@@ -78,6 +81,16 @@ class StateManager:
         dirname = os.path.dirname(self.state_file)
         if dirname:
             os.makedirs(dirname, exist_ok=True)
+
+    def warn_if_fallback(self):
+        """Emit fallback warning on stdout, once per project root per process (AC 5.8.2)."""
+        if self.using_fallback and self.project_root not in StateManager._fallback_warned:
+            StateManager._fallback_warned.add(self.project_root)
+            print(
+                f"[⚠️] State file not writable at .lisa/state.json — "
+                f"using fallback: {self.state_file}\n"
+                f"[⚠️] State will NOT survive reboot. Run `lisa init --fix` to repair."
+            )
 
     @contextmanager
     def _get_lock(self):
@@ -170,3 +183,70 @@ class StateManager:
     def reset_turn(self):
         """Resets the turn counter to 0."""
         self.update("turn_count", 0)
+
+    def diagnose(self):
+        """Check state storage health. Returns dict with diagnosis."""
+        result = {"healthy": True, "issue": None, "using_fallback": self.using_fallback}
+
+        if self.using_fallback:
+            result["healthy"] = False
+            result["issue"] = (
+                "State is stored in a temporary directory that will not survive reboot. "
+                "The primary .lisa/ directory is not writable."
+            )
+            return result
+
+        # Verify current file is actually writable
+        if not self._is_writable(self.state_file):
+            result["healthy"] = False
+            result["issue"] = f"State file is not writable: {self.state_file}"
+            return result
+
+        return result
+
+    def repair(self):
+        """Attempt to repair state storage. Returns (success, message)."""
+        if not self.project_root:
+            return False, "Cannot repair: no project root set."
+
+        lisa_dir = os.path.join(self.project_root, ".lisa")
+        primary = os.path.join(lisa_dir, "state.json")
+
+        # Step 1: Ensure .lisa/ directory exists with proper permissions
+        try:
+            os.makedirs(lisa_dir, exist_ok=True)
+        except (PermissionError, OSError) as e:
+            return False, f"Cannot create .lisa/ directory: {e}"
+
+        # Step 2: Check if primary is now writable
+        if not self._is_writable(primary):
+            return False, f"Primary state file still not writable at {primary}."
+
+        # Step 3: Migrate state from fallback if applicable
+        old_fallback = self.state_file if self.using_fallback else None
+        if self.using_fallback and os.path.exists(self.state_file):
+            try:
+                shutil.copy2(self.state_file, primary)
+            except (PermissionError, OSError) as e:
+                return False, f"Could not migrate state from fallback: {e}"
+
+        # Step 4: Switch to primary
+        self.state_file = primary
+        self.lock_file = f"{primary}.lock"
+        self.using_fallback = False
+
+        # Step 5: Clean up orphaned fallback files (best-effort)
+        if old_fallback:
+            try:
+                fallback_dir = os.path.dirname(old_fallback)
+                if os.path.exists(old_fallback):
+                    os.remove(old_fallback)
+                lock = f"{old_fallback}.lock"
+                if os.path.exists(lock):
+                    os.remove(lock)
+                if os.path.isdir(fallback_dir) and not os.listdir(fallback_dir):
+                    os.rmdir(fallback_dir)
+            except OSError:
+                pass  # Best-effort cleanup
+
+        return True, "State storage repaired. Now using .lisa/state.json."

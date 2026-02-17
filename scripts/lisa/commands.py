@@ -13,7 +13,9 @@ from .hooks import LIFECYCLE_EVENTS, run_hooks, run_story_complete
 
 def check_mode_bypass(project_root=None):
     """Checks if current mode allows bypassing verification."""
-    state = StateManager(project_root=project_root).load()
+    state_manager = StateManager(project_root=project_root)
+    state_manager.warn_if_fallback()
+    state = state_manager.load()
     mode = state.get("mode", LISA_MODES.NORMAL)
 
     if mode in [LISA_MODES.SPIKE, LISA_MODES.BYPASS_TDD]:
@@ -164,7 +166,8 @@ def enable_spike(args):
     
     # Initialize State Manager
     state_manager = StateManager(project_root=project_root)
-    
+    state_manager.warn_if_fallback()
+
     # Update state to SPIKE
     state_manager.update("mode", LISA_MODES.SPIKE)
     
@@ -185,7 +188,8 @@ def disable_spike(args):
     
     # Initialize State Manager
     state_manager = StateManager(project_root=project_root)
-    
+    state_manager.warn_if_fallback()
+
     # Update state to NORMAL
     state_manager.update("mode", LISA_MODES.NORMAL)
     
@@ -206,7 +210,8 @@ def bypass_tdd(args):
     
     # Initialize State Manager
     state_manager = StateManager(project_root=project_root)
-    
+    state_manager.warn_if_fallback()
+
     # Update state to BYPASS_TDD
     state_manager.update("mode", LISA_MODES.BYPASS_TDD)
     
@@ -227,7 +232,8 @@ def turns(args):
         return 1
         
     state_manager = StateManager(project_root=project_root)
-    
+    state_manager.warn_if_fallback()
+
     if not args:
         # Report mode: show current turn count
         state = state_manager.load()
@@ -310,9 +316,10 @@ def check_context(args):
     print("-----------------------------------")
     
     state_manager = StateManager(project_root=project_root)
+    state_manager.warn_if_fallback()
     state = state_manager.load()
     turn_count = state.get("turn_count", 0)
-    
+
     # Defaults from Story 5.3, but configurable
     turn_warning = config.get("turn_warning_threshold", 12)
     turn_limit = config.get("turn_limit", 20)
@@ -424,14 +431,19 @@ def checkpoint(args):
 
 def init_session(args):
     """
-    prints the content of the external state file to stdout for context injection.
-    Usage: lisa init
+    Prints the content of the external state file to stdout for context injection.
+    With --fix: diagnoses and repairs state persistence issues.
+    Usage: lisa init [--fix]
     """
     try:
         project_root = find_project_root(os.getcwd())
     except FileNotFoundError:
         print_with_status("Error: Could not determine project root.", status_icon="🔴")
         return 1
+
+    # Handle --fix flag (Criteria 3: Self-Healing via Init)
+    if "--fix" in args:
+        return _init_fix(project_root)
 
     try:
         # Load Config
@@ -462,6 +474,42 @@ def init_session(args):
         print_with_status(f"Error: {e}", status_icon="🔴")
         return 1
 
+
+def _init_fix(project_root):
+    """Self-healing: diagnose and repair state persistence issues."""
+    print_with_status("Diagnosing state persistence...", status_icon="🔧")
+    print("---------------------------------------------------")
+
+    state_manager = StateManager(project_root=project_root)
+    diagnosis = state_manager.diagnose()
+
+    if diagnosis["healthy"]:
+        print_with_status("State storage is healthy. No repairs needed.", status_icon="🟢")
+        print_with_status(f"State file: {state_manager.state_file}", status_icon="ℹ️")
+        return 0
+
+    # Report issue
+    print_with_status(f"Issue detected: {diagnosis['issue']}", status_icon="⚠️")
+    print_with_status("Attempting repair...", status_icon="🔧")
+
+    success, message = state_manager.repair()
+
+    if success:
+        # Verify write works
+        try:
+            state = state_manager.load()
+            state_manager.save(state)
+            print_with_status(message, status_icon="🟢")
+            print_with_status(f"State file: {state_manager.state_file}", status_icon="ℹ️")
+            print_with_status("Verified: state is writable.", status_icon="🟢")
+            return 0
+        except Exception as e:
+            print_with_status(f"Repair succeeded but verification failed: {e}", status_icon="🔴")
+            return 1
+    else:
+        print_with_status(f"Repair failed: {message}", status_icon="🔴")
+        return 1
+
 def context_status(args):
     """
     Reports the current activity of the context system.
@@ -474,6 +522,7 @@ def context_status(args):
         return 1
 
     state_manager = StateManager(project_root=project_root)
+    state_manager.warn_if_fallback()
     state = state_manager.load()
     activity = state.get("activity", "unknown")
     
@@ -502,9 +551,10 @@ def context_size(args):
     token_count, file_count = scan_workspace(project_root)
     
     state_manager = StateManager(project_root=project_root)
+    state_manager.warn_if_fallback()
     state = state_manager.load()
     turn_count = state.get("turn_count", 0)
-    
+
     print_with_status(f"Token Count: {token_count}", status_icon="📊")
     print_with_status(f"File Count:  {file_count}", status_icon="📂")
     print_with_status(f"Turn Count:  {turn_count}", status_icon="⏱️")
@@ -542,20 +592,28 @@ def context_health(args):
     
     # Turn count (Story 5.3 integration)
     state_manager = StateManager(project_root=project_root)
+    state_manager.warn_if_fallback()
     state = state_manager.load()
     turn_count = state.get("turn_count", 0)
-    
+
     turn_warning = config.get("turn_warning_threshold", 12)
     turn_limit = config.get("turn_limit", 20)
-    
+
     turn_icon = "🟢"
     if turn_count > turn_limit:
         turn_icon = "🔴"
     elif turn_count >= turn_warning:
         turn_icon = "🟡"
-    
+
     print_with_status(f"Turn Count:      {turn_count}", status_icon=turn_icon)
-    
+
+    if turn_count > turn_limit:
+        print_with_status(f"CRITICAL: Turn Limit Exceeded (>{turn_limit}).", status_icon="🔴")
+        print_with_status("    Action Required: Perform 'Context Purge' (Compact & Reset).", status_icon="🔴")
+    elif turn_count >= turn_warning:
+        print_with_status(f"WARNING: Approaching Turn Limit ({turn_warning}-{turn_limit}).", status_icon="🟡")
+        print_with_status("    Action Recommended: Check for drift. Consider wrapping up story.", status_icon="🟡")
+
     return 0
 
 def polish(args):
