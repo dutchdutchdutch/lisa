@@ -319,3 +319,23 @@ def get_deferred_failures(project_root):
     if scope is None:
         return None
     return scope.get("deferred_failures", {})
+
+
+# --- UI Test Handoff (Story 7.6) ---
+
+
+def record_ui_handoff(project_root):
+    """Record that the UI test handoff script has been generated."""
+    scope = load_scope(project_root)
+    if scope is None:
+        return
+    scope["ui_handoff_status"] = "script_generated"
+    persist_scope(project_root, scope)
+
+
+def get_ui_handoff_status(project_root):
+    """Get the UI handoff status. Returns status string or None if no scope."""
+    scope = load_scope(project_root)
+    if scope is None:
+        return None
+    return scope.get("ui_handoff_status", "pending")

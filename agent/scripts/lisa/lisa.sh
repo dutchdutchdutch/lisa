@@ -25,11 +25,10 @@ fi
 
 # Get the absolute path of the directory containing this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"
 
-# Set PYTHONPATH to include the current directory so we can run scripts.lisa
-export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
+# SCRIPT_DIR is agent/scripts/lisa/; parent (agent/scripts/) goes on PYTHONPATH
+# so "python3 -m lisa" resolves agent/scripts/lisa/ as the lisa package.
+export PYTHONPATH="$SCRIPT_DIR/..:$PYTHONPATH"
 
 # Exec Handover: Replace current process with Python interpreter
-# We use -m scripts.lisa to run the package entry point (__main__.py)
-exec python3 -m scripts.lisa "$@"
+exec python3 -m lisa "$@"

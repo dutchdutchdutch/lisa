@@ -25,20 +25,37 @@ The Externalizer skill in particular has no Claude Code equivalent. It addresses
 
 ## Installation
 
-1.  Copy `lisa.sh` to your project root.
-2.  Copy `scripts/lisa` to `scripts/lisa`.
-3.  Install dependencies: `pip install tiktoken` (without tiktoken, LISA falls back to characters/4 as a proxy).
+Copy the LISA directory into your project and install dependencies:
 
-For detailed installation instructions, see the [User Guide](docs/user_guide.md#installation).
+```bash
+mkdir -p agent/scripts
+cp -r <lisa-source> agent/scripts/lisa
+chmod +x agent/scripts/lisa/lisa.sh
+pip install tiktoken
+```
+
+Verify installation:
+
+```bash
+./agent/scripts/lisa/lisa.sh version
+```
+
+For global installation, per-project setup details, and virtual environment guidance, see the [User Guide](docs/user_guide.md#installation).
 
 ## Usage
 
 **For detailed command usage, please refer to the [User Guide](docs/user_guide.md).**
 
-Run LISA commands via the shell wrapper:
+Set up an alias for convenience (add to `.bashrc`/`.zshrc` or project `.envrc`):
 
 ```bash
-./lisa.sh [command]
+alias lisa='./agent/scripts/lisa/lisa.sh'
+```
+
+Then run LISA commands:
+
+```bash
+lisa [command]
 ```
 
 ## Lifecycle Stages
@@ -49,11 +66,11 @@ LISA monitors along common story or task lifecycle stages. Each stage can trigge
 |-------|---------------------|-------------|
 | **`story-kickoff`** | *(none)* | Story begins. Configurable entry point for initializing context or loading state. |
 | **`story-in-dev`** | `lisa turns` → **Turn Watchdog** | Each development turn. Tracks reasoning cycles; fires drift warnings at turn 12 (Goldfish Threshold) and compaction alerts at turn 20+. |
-| **`story-test`** | **Refactor Gate** | Tests are green. Runs a structured refactor loop — improve code quality without changing behavior, then verify impact on dependent modules via `lisa analyze`. |
-| **`story-complete`** · Step 1 | `lisa polish` → **Polish Pass** | Runs a multi-phase quality scan: duplicate code, naming audit, error handling gaps, magic values, and performance/security review. |
+| **`story-test`** | **Refactor Gate** | Tests are green. Runs a structured refactor loop — improve code quality without changing behavior, then verify impact. When scope is set, uses `lisa verify-layer` for scoped layer verification with deferral and progression gates. Otherwise falls back to manual impact analysis via `lisa analyze`. |
+| **`story-complete`** · Step 1 | `lisa polish` → **Polish Pass** | Runs a multi-phase quality scan: duplicate code, naming audit, error handling gaps, magic values, and performance/security review. Regression gate uses scoped layer verification when scope is set, full regression otherwise. |
 | **`story-complete`** · Step 2 | `lisa context` → **Context Health Check** | Measures token usage via **tiktoken** against your configured limit. Reports a traffic light (🟢🟡🔴) plus turn-count drift analysis. |
 | **`story-complete`** · Step 3 | Auto-remediation (if 🟡 or 🔴) | **Context Curator** — compress and summarize conversation history. **Checkpoint** — pin critical state to `todo.md`. **Session Management** — recommend `lisa reset` to archive and start fresh when context is saturated. |
-| **`context-reset`** | `lisa checkpoint` → **Checkpoint** | After `lisa reset`. Validates that the external state artifact (`todo.md`) exists and is fresh. |
+| **`context-reset`** | `lisa checkpoint` → **Checkpoint** | After `lisa reset`. Archives and clears scope state, validates that the external state artifact (`todo.md`) exists and is fresh. |
 
 > Hooks are configurable via `lifecycle_hooks` in `.lisa/config.json`. All hooks are **fail-open** — failures log warnings but never block workflow.
 
@@ -91,7 +108,7 @@ Tracks discrete agentic reasoning cycles to detect logic drift before context de
 A reusable epic-level refactoring skill that detects cross-cutting quality issues.
 -   **Invoke:** Run `lisa polish` to load the Polish Pass skill protocol.
 -   **Phases:** Duplicate detection, naming audit, error handling consistency, magic value scan, performance/security review, and project structure verification.
--   **Skill:** `skills/polish-pass/skill.md`
+-   **Skill:** Bundled inside the LISA package (`agent/scripts/lisa/skills/polish-pass/skill.md`)
 
 ### Lifecycle Hooks
 Automatically invoke LISA skills at key story lifecycle boundaries.

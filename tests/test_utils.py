@@ -3,7 +3,7 @@ import tempfile
 import shutil
 import os
 from pathlib import Path
-from scripts.lisa.utils import find_project_root
+from lisa.utils import find_project_root
 
 class TestUtils(unittest.TestCase):
     def setUp(self):
@@ -21,12 +21,12 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(found, str(root.resolve()))
         
     def test_find_root_from_subdir(self):
-        # Structure: /root/lisa.sh, /root/subdir/deep/
+        # Structure: /root/.git/, /root/subdir/deep/
         root = Path(self.test_dir)
-        (root / "lisa.sh").touch()
+        (root / ".git").mkdir()
         subdir = root / "subdir" / "deep"
         subdir.mkdir(parents=True)
-        
+
         found = find_project_root(str(subdir))
         self.assertEqual(found, str(root.resolve()))
 

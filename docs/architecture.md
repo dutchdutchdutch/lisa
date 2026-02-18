@@ -70,7 +70,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 **Initialization Command:**
 
 ```bash
-mkdir -p .lisa/hooks scripts/lisa .agent/skills/tdd-gate
+mkdir -p .lisa/hooks agent/scripts/lisa agent/scripts/lisa/skills/tdd-gate
 touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 # Core logic: Skill Markdown + Python Tools
 ```
@@ -117,7 +117,7 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 
 ### Infrastructure & Deployment
 *   **Decision:** Repo-based Distribution (Phase 1).
-*   **Pattern:** Scripts committed to `scripts/lisa`.
+*   **Pattern:** Scripts committed to `agent/scripts/lisa`.
 *   **Rationale:** "Walking Skeleton" approach. External dependencies (like `pytest`) are permitted where they add significant value over standard library, provided they are documented.
 
 ### Decision Impact Analysis
@@ -135,7 +135,7 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 
 ### Hook Invocation Pattern (The "Handover")
 *   **Pattern:** `Exec` Handover.
-*   **Rule:** `lisa.sh` collects git/shell context, exports them as `ENV_VARS`, then `exec python3 scripts/lisa/main.py`.
+*   **Rule:** `lisa.sh` collects git/shell context, exports them as `ENV_VARS`, then `exec python3 -m lisa`.
 *   **Why:** Replaces the shell process with Python. Cleaner signal handling (Ctrl+C kills Python, not just the shell wrapper).
 
 ### State Schema (The "Memory")
@@ -230,13 +230,13 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 ### Requirements to Structure Mapping
 
 **Feature Mapping:**
-*   **Workflow Enforcement (FR1-FR4):** Implemented in `scripts/lisa/commands.py`
-*   **Context Governance (FR5-FR7):** Implemented in `scripts/lisa/context_stats.py` and `scripts/lisa/archiver.py`
+*   **Workflow Enforcement (FR1-FR4):** Implemented in `agent/scripts/lisa/commands.py`
+*   **Context Governance (FR5-FR7):** Implemented in `agent/scripts/lisa/context_stats.py` and `agent/scripts/lisa/archiver.py`
 *   **User Interaction (FR8-FR9):** Implemented in `main.py` (Output Formatting)
 
 **Cross-Cutting Concerns:**
 *   **Observability:** `[LISA]` prefix handling in `main.py`.
-*   **Configuration:** `scripts/lisa/config.py` module.
+*   **Configuration:** `agent/scripts/lisa/config.py` module.
 
 ## Architecture Validation Results
 
@@ -247,7 +247,7 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 
 ### Requirements Coverage Validation ✅
 *   **Workflow Gates (FR1-FR4):** Covered by `lisa.sh` hook logic.
-*   **Context Governance (FR5-FR7):** Covered by `scripts/lisa/commands/check.py`.
+*   **Context Governance (FR5-FR7):** Covered by `agent/scripts/lisa/context_stats.py`.
 *   **Traffic Light (FR8):** Covered by `main.py`.
 *   **Zero-Dependency (NFR):** Relaxed in Epic 5 to support `tiktoken`. Now "Low-Dependency".
 

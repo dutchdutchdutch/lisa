@@ -1,13 +1,13 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from scripts.lisa.commands import init_session
+from lisa.commands import init_session
 import os
 
 class TestPermissionHandling(unittest.TestCase):
     
-    @patch('scripts.lisa.commands.find_project_root')
-    @patch('scripts.lisa.commands.ConfigManager')
-    @patch('scripts.lisa.commands.print_with_status')
+    @patch('lisa.commands.find_project_root')
+    @patch('lisa.commands.ConfigManager')
+    @patch('lisa.commands.print_with_status')
     def test_init_session_permission_error(self, mock_print_with_status, mock_config_manager, mock_find_root):
         # Setup mocks
         mock_find_root.return_value = "/mock/root"
@@ -27,10 +27,10 @@ class TestPermissionHandling(unittest.TestCase):
         except PermissionError:
             self.fail("init_session raised PermissionError instead of handling it gracefully")
 
-    @patch('scripts.lisa.commands.find_project_root')
-    @patch('scripts.lisa.commands.ConfigManager')
+    @patch('lisa.commands.find_project_root')
+    @patch('lisa.commands.ConfigManager')
     @patch('builtins.open')
-    @patch('scripts.lisa.commands.print_with_status')
+    @patch('lisa.commands.print_with_status')
     def test_init_session_file_read_permission_error(self, mock_print_with_status, mock_open, mock_config_manager, mock_find_root):
         # Setup mocks for successful config load but failed file read
         mock_find_root.return_value = "/mock/root"

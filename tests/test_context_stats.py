@@ -7,7 +7,7 @@ import shutil
 from unittest.mock import patch, MagicMock
 
 # We expect this module to verify, even if it doesn't exist yet (TDD)
-from scripts.lisa.context_stats import count_tokens, get_context_health, scan_workspace, MAX_FILE_SIZE
+from lisa.context_stats import count_tokens, get_context_health, scan_workspace, MAX_FILE_SIZE
 
 class TestContextStats(unittest.TestCase):
     # ...
@@ -25,7 +25,7 @@ class TestContextStats(unittest.TestCase):
             expected_tokens = math.ceil(large_size / 4)
 
             # Patch getsize to simulate large file
-            with patch('scripts.lisa.context_stats.os.path.getsize', return_value=large_size):
+            with patch('lisa.context_stats.os.path.getsize', return_value=large_size):
                 # Patch open to verify it is NOT called for reading
                 # Note: 'builtins.open' patches everywhere, so we must be careful.
                 # scan_workspace uses `open(..., 'r', ...)`
@@ -47,7 +47,7 @@ class TestContextStats(unittest.TestCase):
 
 
     
-    @patch('scripts.lisa.context_stats.ENCODING', None) # Force Heuristic
+    @patch('lisa.context_stats.ENCODING', None) # Force Heuristic
     def test_count_tokens_heuristic(self):
         """Test that count_tokens uses the char/4 heuristic when tiktoken missing."""
         # 4 chars = 1 token
@@ -65,7 +65,7 @@ class TestContextStats(unittest.TestCase):
         mock_encoding = MagicMock()
         mock_encoding.encode.return_value = [1, 2, 3] # simulate 3 tokens
         
-        with patch('scripts.lisa.context_stats.ENCODING', mock_encoding):
+        with patch('lisa.context_stats.ENCODING', mock_encoding):
             count = count_tokens("some text")
             self.assertEqual(count, 3)
             # Ensure special tokens are disallowed as per implementation
@@ -88,7 +88,7 @@ class TestContextStats(unittest.TestCase):
         self.assertEqual(get_context_health(1000, limit), "RED")
         self.assertEqual(get_context_health(1500, limit), "RED")
 
-    @patch('scripts.lisa.context_stats.ENCODING', None) # Force Heuristic
+    @patch('lisa.context_stats.ENCODING', None) # Force Heuristic
     def test_scan_workspace_integration(self):
         """Integration test with a temp directory (using heuristic fallback)."""
         # Create a temp dir
@@ -138,7 +138,7 @@ class TestContextStats(unittest.TestCase):
             with open(os.path.join(test_dir, "file.txt"), "w") as f:
                 f.write("content") # 10 tokens via mock
 
-            with patch('scripts.lisa.context_stats.ENCODING', mock_encoding):
+            with patch('lisa.context_stats.ENCODING', mock_encoding):
                 total, count = scan_workspace(test_dir)
                 self.assertEqual(total, 10)
                 self.assertEqual(count, 1)

@@ -34,6 +34,27 @@ Now that the tests are Green, you must look for opportunities to improve the cod
 **Principle:** "Don't break the neighbors."
 Changes in one file can break others. You must verify dependencies.
 
+### If scope is set (lisa scope was run):
+
+Use scoped layer verification — it handles dependency analysis, scope filtering, and failure deferral automatically.
+
+1.  **Run Unit Layer:**
+    ```bash
+    lisa verify-layer unit
+    ```
+    *   Runs only in-scope unit tests. Out-of-scope failures are deferred (logged but do not block).
+    *   If in-scope failures exist, fix them before proceeding.
+
+2.  **Run Integration Layer:**
+    ```bash
+    lisa verify-layer integration
+    ```
+    *   Blocked if the unit layer is not clean (layer progression gate).
+    *   Runs only in-scope integration tests with the same deferral rules.
+    *   If in-scope failures exist, fix at the integration layer — do not revisit unit code unless a unit test also fails.
+
+### If no scope is set (fallback):
+
 1.  **Analyze Dependencies:**
     *   Run the analysis tool to find files that import your modified code:
         ```bash
@@ -60,6 +81,5 @@ Changes in one file can break others. You must verify dependencies.
 
 - [ ] Refactored for clarity and simplicity.
 - [ ] Requirements test still PASSES.
-- [ ] Dependencies identified via `lisa analyze`.
-- [ ] Impact Suite approved by Human.
-- [ ] Impact Suite PASSES.
+- [ ] Impact verified (scoped layer verification OR manual impact suite).
+- [ ] All in-scope tests PASS.

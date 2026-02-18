@@ -10,7 +10,7 @@ import json
 import tempfile
 import shutil
 
-from scripts.lisa.classifier import (
+from lisa.classifier import (
     discover_test_files,
     classify_file,
     classify_all,
@@ -524,7 +524,7 @@ class TestClassifyCommand(unittest.TestCase):
     def test_classify_all_output_includes_required_fields(self):
         """lisa classify --all output includes UNIT count, INTEGRATION count, Total."""
         from unittest.mock import patch
-        from scripts.lisa.commands import classify
+        from lisa.commands import classify
 
         self._create_file("tests/test_a.py")
         self._create_file("tests/integration/test_b.py")
@@ -537,9 +537,9 @@ class TestClassifyCommand(unittest.TestCase):
             }
         }
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.ConfigManager') as MockConfig, \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.ConfigManager') as MockConfig, \
+             patch('lisa.commands.print_with_status') as mock_print:
             MockConfig.return_value.load.return_value = mock_config
             result = classify(["--all"])
 
@@ -552,7 +552,7 @@ class TestClassifyCommand(unittest.TestCase):
     def test_classify_single_file_output(self):
         """lisa classify <file> outputs file, layer, and method."""
         from unittest.mock import patch
-        from scripts.lisa.commands import classify
+        from lisa.commands import classify
 
         self._create_file("tests/test_foo.py")
 
@@ -564,9 +564,9 @@ class TestClassifyCommand(unittest.TestCase):
             }
         }
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.ConfigManager') as MockConfig, \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.ConfigManager') as MockConfig, \
+             patch('lisa.commands.print_with_status') as mock_print:
             MockConfig.return_value.load.return_value = mock_config
             result = classify([os.path.join("tests", "test_foo.py")])
 
@@ -579,11 +579,11 @@ class TestClassifyCommand(unittest.TestCase):
     def test_classify_missing_file_returns_error(self):
         """lisa classify <nonexistent> returns exit code 1."""
         from unittest.mock import patch
-        from scripts.lisa.commands import classify
+        from lisa.commands import classify
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.ConfigManager') as MockConfig, \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.ConfigManager') as MockConfig, \
+             patch('lisa.commands.print_with_status'):
             MockConfig.return_value.load.return_value = {"test_layers": {}}
             result = classify(["tests/nonexistent.py"])
 

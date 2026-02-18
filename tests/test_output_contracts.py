@@ -11,10 +11,10 @@ import shutil
 import json
 from unittest.mock import patch, MagicMock, call
 
-from scripts.lisa.commands import (
+from lisa.commands import (
     context_status, context_size, context_health, polish, refactor
 )
-from scripts.lisa.state import ContextActivity
+from lisa.state import ContextActivity
 
 
 class TestContextHealthOutputContract(unittest.TestCase):
@@ -31,9 +31,9 @@ class TestContextHealthOutputContract(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @patch('scripts.lisa.commands.ConfigManager')
-    @patch('scripts.lisa.commands.scan_workspace')
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
     def test_health_report_includes_all_fields(self, mock_root, mock_scan, MockConfig):
         """context_health output must include: Saturation, Signal Ratio, Status, Turn Count."""
         mock_root.return_value = self.test_dir
@@ -43,7 +43,7 @@ class TestContextHealthOutputContract(unittest.TestCase):
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             result = context_health([])
 
         self.assertEqual(result, 0)
@@ -61,9 +61,9 @@ class TestContextHealthOutputContract(unittest.TestCase):
         for field in required_fields:
             self.assertIn(field, all_output, f"Missing required field: '{field}'")
 
-    @patch('scripts.lisa.commands.ConfigManager')
-    @patch('scripts.lisa.commands.scan_workspace')
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
     def test_health_turn_count_color_green(self, mock_root, mock_scan, MockConfig):
         """Turn count below warning threshold should use green icon."""
         mock_root.return_value = self.test_dir
@@ -72,7 +72,7 @@ class TestContextHealthOutputContract(unittest.TestCase):
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             context_health([])
 
         # Find the Turn Count call specifically
@@ -80,9 +80,9 @@ class TestContextHealthOutputContract(unittest.TestCase):
         self.assertEqual(len(turn_calls), 1, "Expected exactly one Turn Count field")
         self.assertIn("🟢", str(turn_calls[0]))
 
-    @patch('scripts.lisa.commands.ConfigManager')
-    @patch('scripts.lisa.commands.scan_workspace')
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
     def test_health_turn_count_color_amber(self, mock_root, mock_scan, MockConfig):
         """Turn count at warning threshold should use amber icon."""
         # Write state with turn count at threshold
@@ -96,15 +96,15 @@ class TestContextHealthOutputContract(unittest.TestCase):
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             context_health([])
 
         turn_calls = [c for c in mock_print.call_args_list if "Turn Count:" in str(c)]
         self.assertIn("🟡", str(turn_calls[0]))
 
-    @patch('scripts.lisa.commands.ConfigManager')
-    @patch('scripts.lisa.commands.scan_workspace')
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
     def test_health_turn_count_color_red(self, mock_root, mock_scan, MockConfig):
         """Turn count above turn limit should use red icon."""
         state_path = os.path.join(self.test_dir, ".lisa", "state.json")
@@ -117,7 +117,7 @@ class TestContextHealthOutputContract(unittest.TestCase):
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             context_health([])
 
         turn_calls = [c for c in mock_print.call_args_list if "Turn Count:" in str(c)]
@@ -137,14 +137,14 @@ class TestContextSizeOutputContract(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @patch('scripts.lisa.commands.scan_workspace')
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
     def test_size_report_includes_all_fields(self, mock_root, mock_scan):
         """context_size output must include: Token Count, File Count, Turn Count."""
         mock_root.return_value = self.test_dir
         mock_scan.return_value = (8000, 42)
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             result = context_size([])
 
         self.assertEqual(result, 0)
@@ -171,14 +171,14 @@ class TestContextStatusOutputContract(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @patch('scripts.lisa.commands.StateManager')
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.StateManager')
+    @patch('lisa.commands.find_project_root')
     def test_status_report_includes_all_fields(self, mock_root, MockState):
         """context_status output must include: Current Activity."""
         mock_root.return_value = self.test_dir
         MockState.return_value.load.return_value = {"activity": ContextActivity.MONITORING}
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             result = context_status([])
 
         self.assertEqual(result, 0)
@@ -207,12 +207,12 @@ class TestPolishOutputContract(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.find_project_root')
     def test_polish_output_includes_all_sections(self, mock_root):
         """polish output must include: loading msg, skill content, separator, follow-up."""
         mock_root.return_value = self.test_dir
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_status, \
+        with patch('lisa.commands.print_with_status') as mock_status, \
              patch('builtins.print') as mock_print:
             result = polish([])
 
@@ -249,12 +249,12 @@ class TestRefactorOutputContract(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.find_project_root')
     def test_refactor_output_includes_all_sections(self, mock_root):
         """refactor output must include: loading msg, skill content, separator, follow-up."""
         mock_root.return_value = self.test_dir
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_status, \
+        with patch('lisa.commands.print_with_status') as mock_status, \
              patch('builtins.print') as mock_print:
             result = refactor([])
 
@@ -282,7 +282,7 @@ class TestDefaultHooksContract(unittest.TestCase):
 
     def test_default_hooks_match_documentation(self):
         """Config defaults must match what's documented in README lifecycle table."""
-        from scripts.lisa.config import ConfigManager
+        from lisa.config import ConfigManager
         defaults = ConfigManager._DEFAULTS["lifecycle_hooks"]
 
         expected = {

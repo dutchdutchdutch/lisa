@@ -4,7 +4,7 @@ import shutil
 import tempfile
 import json
 from unittest.mock import patch
-from scripts.lisa.state import StateManager
+from lisa.state import StateManager
 
 class TestStateManager(unittest.TestCase):
 
@@ -306,12 +306,12 @@ class TestTurnCounterAccuracy(unittest.TestCase):
         manager2 = StateManager(project_root=self.test_dir)
         self.assertEqual(manager2.load()["turn_count"], 12)
 
-    @patch('scripts.lisa.commands.scan_workspace')
-    @patch('scripts.lisa.commands.find_project_root')
-    @patch('scripts.lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
+    @patch('lisa.commands.ConfigManager')
     def test_context_health_reflects_updated_turn(self, MockConfig, mock_find_root, mock_scan):
         """Criteria 4: `lisa context health` reflects the turn count set by `lisa turns`."""
-        from scripts.lisa.commands import context_health
+        from lisa.commands import context_health
 
         mock_find_root.return_value = self.test_dir
         mock_scan.return_value = (5000, 20)
@@ -323,7 +323,7 @@ class TestTurnCounterAccuracy(unittest.TestCase):
         manager = StateManager(project_root=self.test_dir)
         manager.update("turn_count", 12)
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             context_health([])
 
         # Turn count 12 should show amber (warning threshold)
@@ -331,12 +331,12 @@ class TestTurnCounterAccuracy(unittest.TestCase):
         # Goldfish Threshold warning text must fire (AC4)
         mock_print.assert_any_call("WARNING: Approaching Turn Limit (12-20).", status_icon="🟡")
 
-    @patch('scripts.lisa.commands.scan_workspace')
-    @patch('scripts.lisa.commands.find_project_root')
-    @patch('scripts.lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
+    @patch('lisa.commands.ConfigManager')
     def test_context_health_red_at_turn_limit(self, MockConfig, mock_find_root, mock_scan):
         """Criteria 4: Turn count > 20 (turn_limit) triggers red status in health report."""
-        from scripts.lisa.commands import context_health
+        from lisa.commands import context_health
 
         mock_find_root.return_value = self.test_dir
         mock_scan.return_value = (5000, 20)
@@ -348,7 +348,7 @@ class TestTurnCounterAccuracy(unittest.TestCase):
         manager = StateManager(project_root=self.test_dir)
         manager.update("turn_count", 21)
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             context_health([])
 
         # Turn count 21 should show red (exceeded limit)
@@ -370,23 +370,23 @@ class TestInitFix(unittest.TestCase):
         os.chdir(self.original_cwd)
         shutil.rmtree(self.test_dir)
 
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.find_project_root')
     def test_init_fix_healthy_system(self, mock_find_root):
         """--fix on a healthy system reports no repairs needed."""
-        from scripts.lisa.commands import init_session
+        from lisa.commands import init_session
 
         mock_find_root.return_value = self.test_dir
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             result = init_session(["--fix"])
 
         self.assertEqual(result, 0)
         mock_print.assert_any_call("State storage is healthy. No repairs needed.", status_icon="🟢")
 
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.find_project_root')
     def test_init_fix_repairs_broken_storage(self, mock_find_root):
         """--fix detects and repairs a broken state storage."""
-        from scripts.lisa.commands import init_session
+        from lisa.commands import init_session
 
         mock_find_root.return_value = self.test_dir
 
@@ -404,8 +404,8 @@ class TestInitFix(unittest.TestCase):
 
             # Inject the fallback StateManager into _init_fix so it exercises
             # the unhealthy → repair → verify path
-            with patch('scripts.lisa.commands.StateManager', return_value=fallback_sm):
-                with patch('scripts.lisa.commands.print_with_status') as mock_print:
+            with patch('lisa.commands.StateManager', return_value=fallback_sm):
+                with patch('lisa.commands.print_with_status') as mock_print:
                     result = init_session(["--fix"])
         finally:
             try:
@@ -420,19 +420,19 @@ class TestInitFix(unittest.TestCase):
         # Assert repair succeeded
         mock_print.assert_any_call("Verified: state is writable.", status_icon="🟢")
 
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.find_project_root')
     def test_init_fix_routes_correctly(self, mock_find_root):
         """init_session with --fix calls _init_fix, without it does normal init."""
-        from scripts.lisa.commands import init_session
+        from lisa.commands import init_session
 
         mock_find_root.return_value = self.test_dir
 
         # With --fix: should call diagnose path (returns 0 on healthy)
-        with patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.print_with_status'):
             result = init_session(["--fix"])
         self.assertEqual(result, 0)
 
         # Without --fix: should try to load todo.md (which doesn't exist)
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             result = init_session([])
         self.assertEqual(result, 1)

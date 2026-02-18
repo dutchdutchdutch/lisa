@@ -7,7 +7,7 @@ import shutil
 from unittest.mock import patch, MagicMock, call
 
 
-from scripts.lisa.hooks import LIFECYCLE_EVENTS, run_hooks, run_story_complete
+from lisa.hooks import LIFECYCLE_EVENTS, run_hooks, run_story_complete
 
 
 class TestLifecycleEvents(unittest.TestCase):
@@ -30,9 +30,9 @@ class TestRunHooks(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @patch('scripts.lisa.hooks.subprocess.run')
-    @patch('scripts.lisa.hooks.ConfigManager')
-    @patch('scripts.lisa.hooks.print_with_status')
+    @patch('lisa.hooks.subprocess.run')
+    @patch('lisa.hooks.ConfigManager')
+    @patch('lisa.hooks.print_with_status')
     def test_runs_configured_hooks(self, mock_print, mock_config_cls, mock_subprocess):
         """Should execute each command configured for the event."""
         mock_config = MagicMock()
@@ -51,8 +51,8 @@ class TestRunHooks(unittest.TestCase):
         self.assertEqual(cmd, "lisa turns")
         self.assertTrue(success)
 
-    @patch('scripts.lisa.hooks.ConfigManager')
-    @patch('scripts.lisa.hooks.print_with_status')
+    @patch('lisa.hooks.ConfigManager')
+    @patch('lisa.hooks.print_with_status')
     def test_empty_hooks_noop(self, mock_print, mock_config_cls):
         """Empty hook list should return empty results without errors."""
         mock_config = MagicMock()
@@ -65,9 +65,9 @@ class TestRunHooks(unittest.TestCase):
 
         self.assertEqual(results, [])
 
-    @patch('scripts.lisa.hooks.subprocess.run')
-    @patch('scripts.lisa.hooks.ConfigManager')
-    @patch('scripts.lisa.hooks.print_with_status')
+    @patch('lisa.hooks.subprocess.run')
+    @patch('lisa.hooks.ConfigManager')
+    @patch('lisa.hooks.print_with_status')
     def test_failed_hook_logs_warning(self, mock_print, mock_config_cls, mock_subprocess):
         """Failed hook should log warning but not raise (fail-open, AC3)."""
         mock_config = MagicMock()
@@ -86,8 +86,8 @@ class TestRunHooks(unittest.TestCase):
         warning_calls = [c for c in mock_print.call_args_list if "WARNING" in str(c)]
         self.assertTrue(len(warning_calls) > 0, "Expected a warning to be logged")
 
-    @patch('scripts.lisa.hooks.ConfigManager')
-    @patch('scripts.lisa.hooks.print_with_status')
+    @patch('lisa.hooks.ConfigManager')
+    @patch('lisa.hooks.print_with_status')
     def test_unknown_event_returns_empty(self, mock_print, mock_config_cls):
         """Unknown event name should return empty results (not crash)."""
         mock_config = MagicMock()
@@ -100,9 +100,9 @@ class TestRunHooks(unittest.TestCase):
 
         self.assertEqual(results, [])
 
-    @patch('scripts.lisa.hooks.subprocess.run')
-    @patch('scripts.lisa.hooks.ConfigManager')
-    @patch('scripts.lisa.hooks.print_with_status')
+    @patch('lisa.hooks.subprocess.run')
+    @patch('lisa.hooks.ConfigManager')
+    @patch('lisa.hooks.print_with_status')
     def test_multiple_hooks_all_run(self, mock_print, mock_config_cls, mock_subprocess):
         """Multiple hooks for an event should all be executed."""
         mock_config = MagicMock()
@@ -117,8 +117,8 @@ class TestRunHooks(unittest.TestCase):
         self.assertEqual(len(results), 2)
         self.assertTrue(all(s for _, s, _ in results))
 
-    @patch('scripts.lisa.hooks.ConfigManager')
-    @patch('scripts.lisa.hooks.print_with_status')
+    @patch('lisa.hooks.ConfigManager')
+    @patch('lisa.hooks.print_with_status')
     def test_missing_config_key_noop(self, mock_print, mock_config_cls):
         """Missing lifecycle_hooks config should return empty results."""
         mock_config = MagicMock()
@@ -141,10 +141,10 @@ class TestRunStoryComplete(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @patch('scripts.lisa.hooks.run_hooks')
-    @patch('scripts.lisa.commands.check_context')
-    @patch('scripts.lisa.hooks.ConfigManager')
-    @patch('scripts.lisa.hooks.print_with_status')
+    @patch('lisa.hooks.run_hooks')
+    @patch('lisa.commands.check_context')
+    @patch('lisa.hooks.ConfigManager')
+    @patch('lisa.hooks.print_with_status')
     def test_orchestration_runs_hooks_then_health(self, mock_print, mock_config_cls, mock_check, mock_run_hooks):
         """story-complete should run hooks, then health check."""
         mock_config = MagicMock()
@@ -161,10 +161,10 @@ class TestRunStoryComplete(unittest.TestCase):
         mock_run_hooks.assert_called_once_with("story-complete", self.test_dir)
         mock_check.assert_called_once()
 
-    @patch('scripts.lisa.hooks.run_hooks')
-    @patch('scripts.lisa.commands.check_context')
-    @patch('scripts.lisa.hooks.ConfigManager')
-    @patch('scripts.lisa.hooks.print_with_status')
+    @patch('lisa.hooks.run_hooks')
+    @patch('lisa.commands.check_context')
+    @patch('lisa.hooks.ConfigManager')
+    @patch('lisa.hooks.print_with_status')
     def test_orchestration_remediation_on_amber(self, mock_print, mock_config_cls, mock_check, mock_run_hooks):
         """Should trigger remediation when health check returns AMBER (exit code 2)."""
         mock_config = MagicMock()
@@ -183,10 +183,10 @@ class TestRunStoryComplete(unittest.TestCase):
         remediation_calls = [c for c in mock_print.call_args_list if "remediation" in str(c).lower() or "curator" in str(c).lower() or "checkpoint" in str(c).lower()]
         self.assertTrue(len(remediation_calls) > 0, "Expected remediation output")
 
-    @patch('scripts.lisa.hooks.run_hooks')
-    @patch('scripts.lisa.commands.check_context')
-    @patch('scripts.lisa.hooks.ConfigManager')
-    @patch('scripts.lisa.hooks.print_with_status')
+    @patch('lisa.hooks.run_hooks')
+    @patch('lisa.commands.check_context')
+    @patch('lisa.hooks.ConfigManager')
+    @patch('lisa.hooks.print_with_status')
     def test_orchestration_interactive_mode(self, mock_print, mock_config_cls, mock_check, mock_run_hooks):
         """Interactive mode should present findings instead of auto-remediating."""
         mock_config = MagicMock()
@@ -204,10 +204,10 @@ class TestRunStoryComplete(unittest.TestCase):
         interactive_calls = [c for c in mock_print.call_args_list if "interactive" in str(c).lower() or "recommend" in str(c).lower() or "manual" in str(c).lower()]
         self.assertTrue(len(interactive_calls) > 0, "Expected interactive mode output")
 
-    @patch('scripts.lisa.hooks.run_hooks')
-    @patch('scripts.lisa.commands.check_context')
-    @patch('scripts.lisa.hooks.ConfigManager')
-    @patch('scripts.lisa.hooks.print_with_status')
+    @patch('lisa.hooks.run_hooks')
+    @patch('lisa.commands.check_context')
+    @patch('lisa.hooks.ConfigManager')
+    @patch('lisa.hooks.print_with_status')
     def test_orchestration_green_no_remediation(self, mock_print, mock_config_cls, mock_check, mock_run_hooks):
         """GREEN health check should not trigger remediation."""
         mock_config = MagicMock()
@@ -225,10 +225,10 @@ class TestRunStoryComplete(unittest.TestCase):
         remediation_calls = [c for c in mock_print.call_args_list if "remediation" in str(c).lower()]
         self.assertEqual(len(remediation_calls), 0, "No remediation expected for GREEN")
 
-    @patch('scripts.lisa.hooks.run_hooks')
-    @patch('scripts.lisa.commands.check_context')
-    @patch('scripts.lisa.hooks.ConfigManager')
-    @patch('scripts.lisa.hooks.print_with_status')
+    @patch('lisa.hooks.run_hooks')
+    @patch('lisa.commands.check_context')
+    @patch('lisa.hooks.ConfigManager')
+    @patch('lisa.hooks.print_with_status')
     def test_orchestration_failopen_on_error(self, mock_print, mock_config_cls, mock_check, mock_run_hooks):
         """Orchestration should not crash even if check_context raises."""
         mock_config = MagicMock()

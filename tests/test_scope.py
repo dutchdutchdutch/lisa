@@ -10,7 +10,7 @@ import tempfile
 import shutil
 import subprocess
 
-from scripts.lisa.scope import (
+from lisa.scope import (
     derive_modified_files_from_git,
     compute_dependency_cone,
     find_in_scope_tests,
@@ -378,15 +378,15 @@ class TestScopeCommand(unittest.TestCase):
     def test_scope_clear_removes_scope(self):
         """lisa scope --clear removes the scope file."""
         from unittest.mock import patch
-        from scripts.lisa.commands import scope_cmd
+        from lisa.commands import scope_cmd
 
         # Create a scope file
         scope_path = os.path.join(self.test_dir, ".lisa", "scope.json")
         with open(scope_path, "w") as f:
             json.dump({"modified_files": []}, f)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.print_with_status'):
             result = scope_cmd(["--clear"])
 
         self.assertEqual(result, 0)
@@ -395,7 +395,7 @@ class TestScopeCommand(unittest.TestCase):
     def test_scope_show_displays_current_scope(self):
         """lisa scope (no args) shows current scope if set."""
         from unittest.mock import patch
-        from scripts.lisa.commands import scope_cmd
+        from lisa.commands import scope_cmd
 
         scope_data = {
             "modified_files": ["src/a.py"],
@@ -407,8 +407,8 @@ class TestScopeCommand(unittest.TestCase):
         with open(scope_path, "w") as f:
             json.dump(scope_data, f)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = scope_cmd([])
 
         self.assertEqual(result, 0)
@@ -419,10 +419,10 @@ class TestScopeCommand(unittest.TestCase):
     def test_scope_show_warns_when_no_scope(self):
         """lisa scope (no args) warns when no scope is set."""
         from unittest.mock import patch
-        from scripts.lisa.commands import scope_cmd
+        from lisa.commands import scope_cmd
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = scope_cmd([])
 
         self.assertEqual(result, 0)
@@ -432,7 +432,7 @@ class TestScopeCommand(unittest.TestCase):
     def test_scope_with_explicit_files(self):
         """lisa scope file1.py file2.py sets scope from explicit files."""
         from unittest.mock import patch
-        from scripts.lisa.commands import scope_cmd
+        from lisa.commands import scope_cmd
 
         self._create_file("src/a.py", "def a(): pass")
         self._create_file("tests/test_a.py", "from src.a import a")
@@ -444,9 +444,9 @@ class TestScopeCommand(unittest.TestCase):
         with open(layers_path, "w") as f:
             json.dump(classifications, f)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.ConfigManager') as MockConfig, \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.ConfigManager') as MockConfig, \
+             patch('lisa.commands.print_with_status'):
             MockConfig.return_value.load.return_value = {"test_layers": {}}
             result = scope_cmd(["src/a.py"])
 
@@ -459,7 +459,7 @@ class TestScopeCommand(unittest.TestCase):
     def test_scope_with_git_flag(self):
         """lisa scope --git derives from version control."""
         from unittest.mock import patch
-        from scripts.lisa.commands import scope_cmd
+        from lisa.commands import scope_cmd
 
         mock_modified = ["src/x.py"]
         mock_scope = {
@@ -469,12 +469,12 @@ class TestScopeCommand(unittest.TestCase):
             "source": "git_diff",
         }
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.ConfigManager') as MockConfig, \
-             patch('scripts.lisa.commands.derive_modified_files_from_git', return_value=mock_modified), \
-             patch('scripts.lisa.commands.derive_scope', return_value=mock_scope), \
-             patch('scripts.lisa.commands.persist_scope'), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.ConfigManager') as MockConfig, \
+             patch('lisa.commands.derive_modified_files_from_git', return_value=mock_modified), \
+             patch('lisa.commands.derive_scope', return_value=mock_scope), \
+             patch('lisa.commands.persist_scope'), \
+             patch('lisa.commands.print_with_status'):
             MockConfig.return_value.load.return_value = {}
             result = scope_cmd(["--git"])
 
@@ -483,12 +483,12 @@ class TestScopeCommand(unittest.TestCase):
     def test_scope_git_warns_no_modified_files(self):
         """lisa scope --git warns when no modified files found."""
         from unittest.mock import patch
-        from scripts.lisa.commands import scope_cmd
+        from lisa.commands import scope_cmd
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.ConfigManager') as MockConfig, \
-             patch('scripts.lisa.commands.derive_modified_files_from_git', return_value=[]), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.ConfigManager') as MockConfig, \
+             patch('lisa.commands.derive_modified_files_from_git', return_value=[]), \
+             patch('lisa.commands.print_with_status') as mock_print:
             MockConfig.return_value.load.return_value = {}
             result = scope_cmd(["--git"])
 

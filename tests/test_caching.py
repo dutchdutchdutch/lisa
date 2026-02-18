@@ -13,8 +13,8 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from scripts.lisa.context_stats import update_cache, get_cached_health_icon, CACHE_FILE
-from scripts.lisa.config import ConfigManager
+from lisa.context_stats import update_cache, get_cached_health_icon, CACHE_FILE
+from lisa.config import ConfigManager
 
 class TestContextCaching(unittest.TestCase):
     
@@ -48,8 +48,8 @@ class TestContextCaching(unittest.TestCase):
         self.assertIn("timestamp", data)
         self.assertIsInstance(data["timestamp"], float)
 
-    @patch('scripts.lisa.context_stats.scan_workspace')
-    @patch('scripts.lisa.config.ConfigManager.load')
+    @patch('lisa.context_stats.scan_workspace')
+    @patch('lisa.config.ConfigManager.load')
     def test_get_cached_health_icon_hit(self, mock_config_load, mock_scan):
         """Test that get_cached_health_icon returns cached value if valid."""
         # Setup config
@@ -69,8 +69,8 @@ class TestContextCaching(unittest.TestCase):
         self.assertEqual(icon, "🟢")
         mock_scan.assert_not_called()
 
-    @patch('scripts.lisa.context_stats.scan_workspace')
-    @patch('scripts.lisa.config.ConfigManager.load')
+    @patch('lisa.context_stats.scan_workspace')
+    @patch('lisa.config.ConfigManager.load')
     def test_get_cached_health_icon_miss_expired(self, mock_config_load, mock_scan):
         """Test that get_cached_health_icon re-scans if cache is expired."""
         # Setup config
@@ -100,7 +100,7 @@ class TestContextCaching(unittest.TestCase):
         self.assertEqual(data["health"], "RED")
         self.assertGreater(data["timestamp"], params["timestamp"])
 
-    @patch('scripts.lisa.context_stats.scan_workspace')
+    @patch('lisa.context_stats.scan_workspace')
     def test_get_cached_health_icon_no_cache(self, mock_scan):
         """Test behavior when no cache exists."""
         mock_scan.return_value = (100, 5)

@@ -20,8 +20,8 @@ The scope is persisted to `.lisa/scope.json`:
 
 ```json
 {
-  "modified_files": ["scripts/lisa/foo.py", "scripts/lisa/bar.py"],
-  "dependency_cone": ["scripts/lisa/foo.py", "scripts/lisa/bar.py", "scripts/lisa/baz.py"],
+  "modified_files": ["src/foo.py", "src/bar.py"],
+  "dependency_cone": ["src/foo.py", "src/bar.py", "src/baz.py"],
   "in_scope_tests": {
     "UNIT": ["tests/test_foo.py", "tests/test_bar.py"],
     "INTEGRATION": ["tests/integration/test_flow.py"]

@@ -6,7 +6,7 @@ DEFAULT_IGNORES = [".git", ".lisa", "__pycache__", "node_modules", "venv", ".env
 def find_project_root(start_path: str = None) -> str:
     """
     Finds the project root by looking for marker files/directories
-    (.lisa, lisa.sh, .git) starting from start_path and walking up.
+    (.lisa, .git) starting from start_path and walking up.
     
     Args:
         start_path: The path to start searching from. Defaults to cwd.
@@ -29,8 +29,6 @@ def find_project_root(start_path: str = None) -> str:
         # Check for markers
         if (current_path / ".lisa").exists() and (current_path / ".lisa").is_dir():
             return str(current_path)
-        if (current_path / "lisa.sh").exists() and (current_path / "lisa.sh").is_file():
-            return str(current_path)
         if (current_path / ".git").exists() and (current_path / ".git").is_dir():
             return str(current_path)
             
@@ -40,4 +38,4 @@ def find_project_root(start_path: str = None) -> str:
             break
         current_path = parent
         
-    raise FileNotFoundError("Could not find project root (looking for .lisa, lisa.sh, or .git)")
+    raise FileNotFoundError("Could not find project root (looking for .lisa or .git)")

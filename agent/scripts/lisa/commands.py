@@ -11,12 +11,15 @@ from .logger import print_with_status
 from .state import StateManager, LISA_MODES, ContextActivity
 from .hooks import LIFECYCLE_EVENTS, run_hooks, run_story_complete
 from .classifier import classify_file, classify_all, persist_layers, LAYER_UNIT, LAYER_INTEGRATION
+# Skills are bundled inside the package directory
+_SKILL_BASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skills")
+
 from .scope import (
     derive_modified_files_from_git, derive_scope, persist_scope, load_scope, clear_scope,
     get_layer_status, update_layer_status, get_layer_failure_counts,
     get_in_scope_tests_for_layer,
     check_layer_advancement, is_file_in_scope, get_all_tests_for_layer,
-    record_deferred_failures, LAYER_ORDER,
+    record_deferred_failures, get_deferred_failures, record_ui_handoff, LAYER_ORDER,
     STATUS_CLEAN, STATUS_FAILING, STATUS_NOT_RUN,
 )
 
@@ -32,6 +35,42 @@ def check_mode_bypass(project_root=None):
         print_with_status("       Warning: Code is unverified.")
         return True
     return False
+
+
+def _print_scope_context(project_root):
+    """Print scope context summary for skill commands (refactor, polish).
+
+    Shows in-scope test counts, layer status, and deferred failures
+    when scope is set, or a fallback message when not.
+    """
+    scope = load_scope(project_root)
+    if scope is None:
+        print_with_status("Scope: Not set — using manual impact analysis flow.", status_icon="ℹ️")
+        return
+
+    print_with_status("Scope Context", status_icon="🔭")
+    print("---------------------------------------------------")
+
+    # In-scope test counts by layer
+    in_scope = scope.get("in_scope_tests", {})
+    for layer_name in LAYER_ORDER:
+        tests = in_scope.get(layer_name, [])
+        print_with_status(f"  {layer_name}: {len(tests)} in-scope test(s)", status_icon="📋")
+
+    # Layer status
+    status = get_layer_status(project_root)
+    if status:
+        for layer_name in LAYER_ORDER:
+            layer_state = status.get(layer_name, STATUS_NOT_RUN)
+            icon = "🟢" if layer_state == STATUS_CLEAN else "🔴" if layer_state == STATUS_FAILING else "⬜"
+            print_with_status(f"  {layer_name} status: {layer_state}", status_icon=icon)
+
+    # Deferred failures
+    deferred = get_deferred_failures(project_root)
+    if deferred:
+        total = sum(len(files) for files in deferred.values())
+        print_with_status(f"  Deferred failures: {total} (outside story scope)", status_icon="⚠️")
+
 
 def verify_fail(args):
     """
@@ -396,6 +435,12 @@ def reset_context(args):
     # 2. Reset
     if reset_session(project_root):
         print_with_status("State Reset to Defaults (Green/Idle).")
+        # 3. Clear scope (archived in step 1, now remove to prevent leaking across stories)
+        try:
+            clear_scope(project_root)
+            print_with_status("Scope cleared (archived above).")
+        except Exception:
+            pass  # Fail-open: scope.json may not exist
         print_with_status("System Ready for New Task.")
         # Fire context-reset lifecycle hooks
         try:
@@ -642,10 +687,10 @@ def polish(args):
         print_with_status("Error: Could not determine project root.", status_icon="🔴")
         return 1
 
-    skill_path = os.path.join(project_root, "skills", "polish-pass", "skill.md")
+    skill_path = os.path.join(_SKILL_BASE, "polish-pass", "skill.md")
 
     if not os.path.exists(skill_path):
-        print_with_status("Error: Polish Pass skill not found at skills/polish-pass/skill.md", status_icon="🔴")
+        print_with_status(f"Error: Polish Pass skill not found at {skill_path}", status_icon="🔴")
         print_with_status("Install the skill or create it manually.", status_icon="💡")
         return 1
 
@@ -657,6 +702,7 @@ def polish(args):
         print("=" * 60)
         print(content)
         print("=" * 60)
+        _print_scope_context(project_root)
         print_with_status("Follow the protocol above to execute the Polish Pass.", status_icon="🧹")
         return 0
     except Exception as e:
@@ -674,10 +720,10 @@ def refactor(args):
         print_with_status("Error: Could not determine project root.", status_icon="🔴")
         return 1
 
-    skill_path = os.path.join(project_root, "skills", "refactor-gate", "skill.md")
+    skill_path = os.path.join(_SKILL_BASE, "refactor-gate", "skill.md")
 
     if not os.path.exists(skill_path):
-        print_with_status("Error: Refactor Gate skill not found at skills/refactor-gate/skill.md", status_icon="🔴")
+        print_with_status(f"Error: Refactor Gate skill not found at {skill_path}", status_icon="🔴")
         print_with_status("Install the skill or create it manually.", status_icon="💡")
         return 1
 
@@ -689,6 +735,7 @@ def refactor(args):
         print("=" * 60)
         print(content)
         print("=" * 60)
+        _print_scope_context(project_root)
         print_with_status("Follow the protocol above to execute the Refactor Gate.", status_icon="🔧")
         return 0
     except Exception as e:
@@ -961,6 +1008,7 @@ def verify_layer(args):
         print_with_status(f"No in-scope {layer} tests to run.", status_icon="ℹ️")
         update_layer_status(project_root, layer, STATUS_CLEAN, failure_count=0)
         record_deferred_failures(project_root, layer, [])
+        _fire_story_complete_if_all_clean(project_root)
         return 0
 
     print_with_status(f"Scoped Verification: {layer} Layer ({len(tests)} tests)")
@@ -1003,7 +1051,27 @@ def verify_layer(args):
             print_with_status(f"  DEFERRED: {f}", status_icon="⚠️")
 
     # AC3: Only in-scope failures block layer progression
-    return 1 if in_scope_failures else 0
+    if in_scope_failures:
+        return 1
+
+    # Fire story-complete lifecycle when all layers are clean
+    _fire_story_complete_if_all_clean(project_root)
+    return 0
+
+
+def _fire_story_complete_if_all_clean(project_root):
+    """Check if all layers are CLEAN and fire story-complete lifecycle if so."""
+    status = get_layer_status(project_root)
+    if status is None:
+        return
+    for layer_name in LAYER_ORDER:
+        if status.get(layer_name, STATUS_NOT_RUN) != STATUS_CLEAN:
+            return
+    # All layers clean — fire story-complete lifecycle
+    try:
+        run_story_complete(project_root)
+    except Exception:
+        pass  # NFR3: Fail-open
 
 
 def layer_status_cmd(args):
@@ -1036,5 +1104,94 @@ def layer_status_cmd(args):
         else:
             display = layer_state
         print_with_status(f"  {layer_name}: {display}", status_icon=icon)
+
+    return 0
+
+
+def ui_handoff(args):
+    """
+    Generates a manual UI test script for the story's affected behavior.
+    Usage: lisa ui-handoff
+    """
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
+        return 1
+
+    if check_mode_bypass(project_root):
+        return 0
+
+    # Check scope exists
+    scope = load_scope(project_root)
+    if scope is None:
+        print_with_status("No scope is set. Use 'lisa scope' to set scope first.", status_icon="⚠️")
+        return 1
+
+    # AC1: All automated layers must be CLEAN
+    status = get_layer_status(project_root)
+    if status is None:
+        print_with_status("No layer status available. Run automated tests first.", status_icon="⚠️")
+        return 1
+
+    not_clean = []
+    for layer_name in LAYER_ORDER:
+        layer_state = status.get(layer_name, STATUS_NOT_RUN)
+        if layer_state != STATUS_CLEAN:
+            not_clean.append(f"{layer_name} ({layer_state})")
+    if not_clean:
+        print_with_status(
+            f"Automated layers not clean: {', '.join(not_clean)}. "
+            "Resolve automated failures before UI handoff.",
+            status_icon="🔴"
+        )
+        return 1
+
+    # Check skill file exists
+    skill_path = os.path.join(_SKILL_BASE, "ui-handoff", "skill.md")
+    if not os.path.exists(skill_path):
+        print_with_status(
+            f"Error: UI Handoff skill not found at {skill_path}",
+            status_icon="🔴"
+        )
+        return 1
+
+    # AC2: Print scope context — modified files and dependency cone
+    modified_files = scope.get("modified_files", [])
+    dependency_cone = scope.get("dependency_cone", [])
+
+    print_with_status("UI Test Handoff", status_icon="🧪")
+    print("=" * 60)
+
+    print_with_status("Modified Files:", status_icon="📝")
+    for f in modified_files:
+        print_with_status(f"  {f}")
+    if not modified_files:
+        print_with_status("  (none)")
+
+    if dependency_cone:
+        print_with_status("Dependency Cone:", status_icon="🔗")
+        for f in dependency_cone:
+            print_with_status(f"  {f}")
+
+    print("---")
+
+    # Print skill instructions
+    try:
+        with open(skill_path, "r") as f:
+            content = f.read()
+        print(content)
+    except Exception as e:
+        print_with_status(f"Error reading skill file: {e}", status_icon="🔴")
+        return 1
+
+    print("=" * 60)
+
+    # AC4: Record handoff and note non-blocking completion
+    record_ui_handoff(project_root)
+    print_with_status(
+        "UI verification pending — manual test script provided.",
+        status_icon="🧪"
+    )
 
     return 0

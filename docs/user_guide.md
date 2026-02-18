@@ -4,16 +4,108 @@ This guide provides detailed instructions on how to use LISA (Layered Isolated S
 
 ## Installation
 
-LISA is designed as a zero-dependency drop-in tool.
+LISA is designed as a zero-dependency drop-in tool. It installs under `agent/scripts/lisa/` — separate from your project's own scripts and alongside any other agent tools (e.g., `agent/scripts/ralph/`).
 
-1.  **Copy Files**:
-    *   Copy `lisa.sh` to your project root.
-    *   Copy the `scripts/lisa` directory to your project's `scripts/` directory.
-2.  **Install Dependencies**:
-    *   `pip install tiktoken` (required for accurate token counting).
-3.  **Prerequisites**:
-    *   Python 3.8+ installed and available as `python3` in your PATH.
-    *   A POSIX-compliant shell (Bash/Zsh).
+> If your project uses `.agent/` as the agent root, substitute `.agent/scripts/lisa/` throughout.
+
+### Prerequisites
+
+- Python 3.8+ installed and available as `python3` in your PATH.
+- A POSIX-compliant shell (Bash/Zsh).
+
+### Project Installation (Recommended)
+
+Install LISA into a single project, versioned with the repository so the whole team gets it via git.
+
+1. **Copy files:**
+
+    ```bash
+    mkdir -p agent/scripts
+    cp -r <lisa-source> agent/scripts/lisa
+    chmod +x agent/scripts/lisa/lisa.sh
+    ```
+
+2. **Install dependencies:**
+
+    ```bash
+    pip install tiktoken
+    ```
+
+    If using a virtual environment, activate it first or use the venv's pip directly (e.g., `.venv/bin/pip install tiktoken`). Without tiktoken, LISA falls back to `characters/4` as a token estimate.
+
+3. **Set up an alias** (recommended):
+
+    ```bash
+    alias lisa='./agent/scripts/lisa/lisa.sh'
+    ```
+
+    Add this to your shell profile (`.bashrc`, `.zshrc`) or a project-level `.envrc`.
+
+4. **Verify installation:**
+
+    ```bash
+    lisa version
+    ```
+
+    This confirms the shell-to-Python handoff, displays the detected project root, Python version, and whether tiktoken is available.
+
+### Global Installation
+
+Install LISA once and use it across all projects. Useful for personal workflows where you don't need LISA checked into each repo.
+
+1. **Copy files to a global location:**
+
+    ```bash
+    mkdir -p ~/agent/scripts
+    cp -r <lisa-source> ~/agent/scripts/lisa
+    chmod +x ~/agent/scripts/lisa/lisa.sh
+    ```
+
+2. **Add to PATH or create a global alias:**
+
+    ```bash
+    alias lisa='~/agent/scripts/lisa/lisa.sh'
+    ```
+
+    Add this to your shell profile (`.bashrc`, `.zshrc`).
+
+3. **Install dependencies:**
+
+    ```bash
+    pip install tiktoken
+    ```
+
+4. **Verify installation:**
+
+    ```bash
+    lisa version
+    ```
+
+> **Note:** With global installation, LISA discovers the project root dynamically by walking up from the current directory to find `.git/`. Per-project configuration (`.lisa/config.json`) still lives in each project root.
+
+### Directory Layout
+
+```
+project-root/
+├── agent/
+│   └── scripts/
+│       ├── lisa/           # LISA - context governance
+│       │   ├── lisa.sh     # shell entry point
+│       │   ├── __main__.py
+│       │   ├── commands.py
+│       │   ├── ...
+│       │   └── skills/
+│       │       ├── polish-pass/
+│       │       ├── refactor-gate/
+│       │       └── ...
+│       └── ralph/          # sibling agent tool (example)
+├── .lisa/                  # runtime state (auto-created)
+│   ├── config.json
+│   └── state.json
+└── ...
+```
+
+> All examples in this guide assume the `lisa` alias is configured. If not using the alias, substitute `./agent/scripts/lisa/lisa.sh` for `lisa`.
 
 ## Configuration
 
@@ -63,7 +155,7 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh verify-fail tests/test_my_feature.py
+lisa verify-fail tests/test_my_feature.py
 ```
 
 *   **Automated Mode (Default)**: Runs the test.
@@ -71,7 +163,7 @@ LISA uses a hierarchical configuration system.
     *   If the test **PASSES**: Error (Exit Code 1). You must fix the test to fail before implementing logic.
 *   **Interactive Mode**:
     *   Use `--interactive` to pause for confirmation before running the check.
-    *   `./lisa.sh verify-fail tests/test_my_feature.py --interactive`
+    *   `lisa verify-fail tests/test_my_feature.py --interactive`
 
 ### `lisa verify-pass <test_file>`
 
@@ -80,7 +172,7 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh verify-pass tests/test_my_feature.py
+lisa verify-pass tests/test_my_feature.py
 ```
 
 *   Runs the test normally.
@@ -94,7 +186,7 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh spike
+lisa spike
 ```
 
 *   Sets mode to `SPIKE`.
@@ -108,7 +200,7 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh normal
+lisa normal
 ```
 
 *   Sets mode to `NORMAL`.
@@ -121,7 +213,7 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh bypass-tdd
+lisa bypass-tdd
 ```
 
 *   Sets mode to `BYPASS_TDD`.
@@ -135,7 +227,7 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh analyze scripts/lisa/utils.py
+lisa analyze src/utils.py
 ```
 
 *   **Output**: Lists all files in the project that import the target file.
@@ -148,7 +240,7 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh context
+lisa context
 ```
 
 *   **Output includes**:
@@ -164,11 +256,11 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh reset
+lisa reset
 ```
 
-*   **Archival**: Copies the current `.lisa/state.json` and recent logs to `.lisa/archive/{timestamp}/`.
-*   **Reset**: Clears the active `state.json` to default (Green/Idle).
+*   **Archival**: Copies everything in `.lisa/` (state, scope, layers, config) to `.lisa/archive/{timestamp}/`.
+*   **Reset**: Clears the active state to default (Green/Idle) and removes `scope.json` so scope doesn't leak across stories.
 *   **Result**: You are ready to start a new task with a clean slate.
 
 ### `lisa turns`
@@ -180,8 +272,8 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh turns          # Report current turn count (auto-tracked)
-./lisa.sh turns 7        # Explicitly set turn to 7 (overrides auto-tracking)
+lisa turns          # Report current turn count (auto-tracked)
+lisa turns 7        # Explicitly set turn to 7 (overrides auto-tracking)
 ```
 
 *   **Report mode** (no args): Shows current turn count.
@@ -198,10 +290,11 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh polish
+lisa polish
 ```
 
-*   Reads and outputs `skills/polish-pass/skill.md`.
+*   Reads and outputs the Polish Pass skill protocol.
+*   Appends **scope context** (in-scope test counts, layer status, deferred failures) when scope is set, guiding the agent to use scoped layer verification for the regression gate instead of a full test suite.
 *   Follow the printed protocol to execute the Polish Pass.
 *   Best used at the end of an epic or sprint.
 
@@ -212,10 +305,11 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh refactor
+lisa refactor
 ```
 
-*   Reads and outputs `skills/refactor-gate/skill.md`.
+*   Reads and outputs the Refactor Gate skill protocol.
+*   Appends **scope context** (in-scope test counts, layer status, deferred failures) when scope is set, guiding the agent to use `lisa verify-layer` for impact verification instead of manual impact analysis.
 *   Follow the printed protocol to execute the Refactor Gate.
 *   Runs automatically at the `story-test` lifecycle stage.
 
@@ -226,7 +320,7 @@ LISA uses a hierarchical configuration system.
 **Usage**:
 
 ```bash
-./lisa.sh hooks story-complete
+lisa hooks story-complete
 ```
 
 **Valid Events:**
@@ -235,29 +329,53 @@ LISA uses a hierarchical configuration system.
 |-------|-------------|-------------|
 | `story-kickoff` | (none) | When a story starts |
 | `story-in-dev` | `lisa turns` | Each development turn (turn auto-tracked) |
-| `story-test` | `lisa refactor` | After green phase (Refactor Gate) |
-| `story-complete` | `lisa polish` | Story marked complete (also runs health + remediation) |
-| `context-reset` | `lisa checkpoint` | After context reset |
+| `story-test` | `lisa refactor` | After green phase (Refactor Gate). When scope is set, uses scoped layer verification with deferral and progression gates. |
+| `story-complete` | `lisa polish` | Story marked complete (also runs health + remediation). Polish regression gate uses scoped verification when scope is set. |
+| `context-reset` | `lisa checkpoint` | After context reset. Scope is archived and cleared. |
 
-*   **`story-complete`** uses a special orchestrator: runs polish, context health check, and conditional remediation (context-curator, externalizer, session-management) based on health status.
+*   **`story-complete`** uses a special orchestrator: runs polish, context health check, and conditional remediation (context-curator, externalizer, session-management) based on health status. Also fires automatically when `lisa verify-layer` marks all layers (UNIT + INTEGRATION) as CLEAN.
+*   **Scope-aware verification:** When scope is set (`lisa scope`), both the Refactor Gate and Polish Pass use `lisa verify-layer` instead of manual impact analysis or full regression. Scope presence acts as an implicit mode switch — no configuration needed.
 *   **Fail-Open:** Hook failures are logged as warnings and never block workflow.
 
 ### `lisa version`
 
-**Purpose**: Detailed version information.
+**Purpose**: Displays version and diagnostic information. Use this to verify installation.
 
 **Usage**:
 
 ```bash
-./lisa.sh version
+lisa version
 ```
+
+*   **Output includes**: LISA version, Python version, detected project root, and tiktoken availability.
+*   Use this as a smoke test after installation to confirm the full shell-to-Python chain is working.
+
+## Verifying LISA is Running
+
+After installation, use these commands to confirm LISA is operational:
+
+**Quick check** — confirms installation and reports diagnostics:
+
+```bash
+lisa version
+```
+
+**Functional check** — confirms state management and token counting work:
+
+```bash
+lisa context health
+```
+
+**From agent chat** — paste this into your coding agent to verify LISA is accessible:
+
+> Run `lisa version` and confirm LISA is installed correctly.
 
 ## Troubleshooting
 
 -   **"python3 not found"**: Ensure Python is installed and in your PATH.
--   **"Could not determine project root"**: Ensure `lisa.sh` is in the root of your project and you are running it from there or a subdirectory.
+-   **"Could not determine project root"**: Ensure you are running `lisa` from within a git repository. LISA walks up from the current directory to find the project root.
 -   **"Context Limit Exceeded"**: Run `lisa reset` to archive and clear your session.
 -   **"[🔴] Context Red"**: Your workspace is too large. Clean up files or run `lisa reset`.
 -   **"Please fix permissions on .lisa/"**: Check file permissions on the `.lisa/` directory. LISA requires read/write access.
--   **"Polish Pass skill not found"**: Ensure `skills/polish-pass/skill.md` exists. Install the skill or create it manually.
+-   **"Polish Pass skill not found"**: Ensure `agent/scripts/lisa/skills/polish-pass/skill.md` exists relative to your project root.
 -   **"Unknown lifecycle event"**: Check valid events with `lisa hooks` (no arguments).

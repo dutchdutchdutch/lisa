@@ -4,6 +4,7 @@ from .commands import (
     bypass_tdd, check_context, reset_context, checkpoint, init_session,
     context_status, context_size, context_health, run_hooks_cmd,
     turns, polish, refactor, classify, scope_cmd, verify_layer, layer_status_cmd,
+    ui_handoff,
 )
 from .config import ConfigManager
 from .state import StateManager
@@ -17,6 +18,11 @@ def main():
 
     command = sys.argv[1]
     args = sys.argv[2:]
+
+    # Commands that work without a project root (smoke test)
+    if command == "version":
+        print("0.1.0")
+        sys.exit(0)
 
     # Auto-increment turn counter once per response cycle (Story 5.9)
     try:
@@ -70,8 +76,8 @@ def main():
         sys.exit(verify_layer(args))
     elif command == "layer-status":
         sys.exit(layer_status_cmd(args))
-    elif command == "version":
-        print("0.1.0") 
+    elif command == "ui-handoff":
+        sys.exit(ui_handoff(args))
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)

@@ -118,6 +118,23 @@ Think step by step. Execute each phase in order.
 ### Phase 8: Regression Gate
 **Goal:** Prove that polish changes preserved all behavior.
 
+#### If scope is set (lisa scope was run):
+
+Use scoped layer verification — only in-scope tests run, out-of-scope failures are deferred.
+
+1.  **Run Unit Layer:**
+    ```bash
+    lisa verify-layer unit
+    ```
+2.  **Run Integration Layer** (blocked if unit is not clean):
+    ```bash
+    lisa verify-layer integration
+    ```
+3.  **If any in-scope test fails:** Fix the regression immediately. Do not proceed until clean.
+4.  **Report** the final layer status (`lisa layer-status`).
+
+#### If no scope is set (fallback):
+
 1.  **Run** the full regression test suite.
 2.  **If any test fails:** Fix the regression immediately. Do not proceed until green.
 3.  **Report** the final test results.

@@ -5,8 +5,8 @@ import tempfile
 import json
 import time
 from unittest.mock import patch, MagicMock
-from scripts.lisa.state import StateManager
-from scripts.lisa.commands import turns, check_context
+from lisa.state import StateManager
+from lisa.commands import turns, check_context
 
 
 class TestAutoIncrementTurn(unittest.TestCase):
@@ -131,7 +131,7 @@ class TestAutoIncrementIntegration(unittest.TestCase):
         os.chdir(self.original_cwd)
         shutil.rmtree(self.test_dir)
 
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.find_project_root')
     def test_turns_report_shows_auto_incremented_value(self, mock_root):
         """AC1: Turn count reflects response cycles even without explicit set."""
         mock_root.return_value = self.test_dir
@@ -141,12 +141,12 @@ class TestAutoIncrementIntegration(unittest.TestCase):
         manager.auto_increment_turn()
 
         # Now `lisa turns` (report mode) should show 1, not 0
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             result = turns([])
             self.assertEqual(result, 0)
             mock_print.assert_called_with("Current Turn: 1", status_icon="⏱️")
 
-    @patch('scripts.lisa.commands.find_project_root')
+    @patch('lisa.commands.find_project_root')
     def test_explicit_set_after_auto_increment(self, mock_root):
         """AC3: Explicit value takes precedence after auto-increment."""
         mock_root.return_value = self.test_dir
@@ -156,7 +156,7 @@ class TestAutoIncrementIntegration(unittest.TestCase):
         manager.auto_increment_turn()
 
         # Explicit set to 7
-        with patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.print_with_status'):
             result = turns(["7"])
             self.assertEqual(result, 0)
 
@@ -178,9 +178,9 @@ class TestAutoIncrementThresholds(unittest.TestCase):
         os.chdir(self.original_cwd)
         shutil.rmtree(self.test_dir)
 
-    @patch('scripts.lisa.commands.scan_workspace')
-    @patch('scripts.lisa.commands.find_project_root')
-    @patch('scripts.lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
+    @patch('lisa.commands.ConfigManager')
     def test_auto_increment_triggers_amber_at_goldfish(self, MockConfig, mock_root, mock_scan):
         """AC4: Auto-tracked turn crossing 12 fires amber warning."""
         mock_root.return_value = self.test_dir
@@ -193,7 +193,7 @@ class TestAutoIncrementThresholds(unittest.TestCase):
         manager = StateManager(project_root=self.test_dir)
         manager.update("turn_count", 12)
 
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             check_context([])
             mock_print.assert_any_call("Current Turn: 12", status_icon="🟡")
             mock_print.assert_any_call("Status: AMBER", status_icon="🟡")
@@ -212,22 +212,22 @@ class TestMainAutoIncrement(unittest.TestCase):
         os.chdir(self.original_cwd)
         shutil.rmtree(self.test_dir)
 
-    @patch('scripts.lisa.__main__.find_project_root')
-    @patch('scripts.lisa.__main__.StateManager')
-    def test_main_calls_auto_increment(self, MockStateManager, mock_root):
+    @patch('lisa.__main__.find_project_root')
+    @patch('lisa.__main__.StateManager')
+    @patch('lisa.__main__.enable_spike', return_value=0)
+    def test_main_calls_auto_increment(self, _mock_spike, MockStateManager, mock_root):
         """main() calls auto_increment_turn before dispatching commands."""
-        from scripts.lisa.__main__ import main
+        from lisa.__main__ import main
 
         mock_root.return_value = self.test_dir
         mock_manager = MagicMock()
         MockStateManager.return_value = mock_manager
 
-        with patch('sys.argv', ['lisa', 'version']):
-            with patch('builtins.print'):
-                try:
-                    main()
-                except SystemExit:
-                    pass
+        with patch('sys.argv', ['lisa', 'spike']):
+            try:
+                main()
+            except SystemExit:
+                pass
 
         mock_manager.auto_increment_turn.assert_called_once()
 

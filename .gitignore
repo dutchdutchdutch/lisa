@@ -39,5 +39,5 @@ todo.md
 src/
 temp_subdir/
 tests/manual_fail.py
-scripts/lisa/.lisa/
+agent/scripts/lisa/.lisa/
 _bmad/

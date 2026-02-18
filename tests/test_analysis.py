@@ -3,7 +3,7 @@ import tempfile
 import shutil
 import os
 from pathlib import Path
-from scripts.lisa.analysis import find_importers, get_module_name
+from lisa.analysis import find_importers, get_module_name
 
 class TestAnalysis(unittest.TestCase):
     def setUp(self):

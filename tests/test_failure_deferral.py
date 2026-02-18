@@ -11,7 +11,7 @@ import tempfile
 import shutil
 from unittest.mock import patch
 
-from scripts.lisa.scope import (
+from lisa.scope import (
     persist_scope,
     load_scope,
     get_layer_status,
@@ -20,7 +20,7 @@ from scripts.lisa.scope import (
     record_deferred_failures,
     get_deferred_failures,
 )
-from scripts.lisa.classifier import persist_layers
+from lisa.classifier import persist_layers
 
 
 # ---------------------------------------------------------------------------
@@ -196,7 +196,7 @@ class TestVerifyLayerFailureClassification(unittest.TestCase):
 
     def test_runs_all_tests_for_layer(self):
         """verify_layer runs all classified tests for the layer, not just in-scope."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -213,10 +213,10 @@ class TestVerifyLayerFailureClassification(unittest.TestCase):
         ]
         persist_layers(self.test_dir, layers)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0) as mock_run, \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0) as mock_run, \
+             patch('lisa.commands.print_with_status'):
             verify_layer(["unit"])
 
         # All 3 tests should be run, not just the 1 in-scope test
@@ -224,7 +224,7 @@ class TestVerifyLayerFailureClassification(unittest.TestCase):
 
     def test_in_scope_failure_classified_correctly(self):
         """In-scope test failure appears in main failure output."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -241,10 +241,10 @@ class TestVerifyLayerFailureClassification(unittest.TestCase):
         persist_layers(self.test_dir, layers)
 
         # test_a fails (in-scope), test_b passes (out-of-scope)
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', side_effect=lambda f: 1 if f == "tests/test_a.py" else 0), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', side_effect=lambda f: 1 if f == "tests/test_a.py" else 0), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_layer(["unit"])
 
         self.assertEqual(result, 1)
@@ -253,7 +253,7 @@ class TestVerifyLayerFailureClassification(unittest.TestCase):
 
     def test_out_of_scope_failure_classified_as_deferred(self):
         """Out-of-scope test failure appears in deferred section, not main output."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -270,10 +270,10 @@ class TestVerifyLayerFailureClassification(unittest.TestCase):
         persist_layers(self.test_dir, layers)
 
         # test_a passes (in-scope), test_b fails (out-of-scope)
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', side_effect=lambda f: 1 if f == "tests/test_b.py" else 0), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', side_effect=lambda f: 1 if f == "tests/test_b.py" else 0), \
+             patch('lisa.commands.print_with_status') as mock_print:
             verify_layer(["unit"])
 
         all_output = " ".join(str(c) for c in mock_print.call_args_list)
@@ -293,7 +293,7 @@ class TestVerifyLayerDeferredDisplay(unittest.TestCase):
 
     def test_deferred_section_includes_instruction(self):
         """Deferred section tells the agent not to fix these failures."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -310,10 +310,10 @@ class TestVerifyLayerDeferredDisplay(unittest.TestCase):
         persist_layers(self.test_dir, layers)
 
         # Out-of-scope test fails
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', side_effect=lambda f: 1 if f == "tests/test_out.py" else 0), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', side_effect=lambda f: 1 if f == "tests/test_out.py" else 0), \
+             patch('lisa.commands.print_with_status') as mock_print:
             verify_layer(["unit"])
 
         all_output = " ".join(str(c) for c in mock_print.call_args_list)
@@ -322,7 +322,7 @@ class TestVerifyLayerDeferredDisplay(unittest.TestCase):
 
     def test_no_deferred_section_when_no_out_of_scope_failures(self):
         """No deferred section appears when all failures are in-scope."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -338,10 +338,10 @@ class TestVerifyLayerDeferredDisplay(unittest.TestCase):
         persist_layers(self.test_dir, layers)
 
         # In-scope test fails
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=1), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=1), \
+             patch('lisa.commands.print_with_status') as mock_print:
             verify_layer(["unit"])
 
         all_output = " ".join(str(c) for c in mock_print.call_args_list)
@@ -360,7 +360,7 @@ class TestVerifyLayerDecision(unittest.TestCase):
 
     def test_out_of_scope_failures_do_not_block(self):
         """Layer is CLEAN when only out-of-scope tests fail (AC3)."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -377,10 +377,10 @@ class TestVerifyLayerDecision(unittest.TestCase):
         persist_layers(self.test_dir, layers)
 
         # In-scope passes, out-of-scope fails
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', side_effect=lambda f: 1 if f == "tests/test_b.py" else 0), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', side_effect=lambda f: 1 if f == "tests/test_b.py" else 0), \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer(["unit"])
 
         self.assertEqual(result, 0)
@@ -389,7 +389,7 @@ class TestVerifyLayerDecision(unittest.TestCase):
 
     def test_in_scope_failure_still_blocks(self):
         """Layer is FAILING when in-scope test fails, even if out-of-scope also fails."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -406,10 +406,10 @@ class TestVerifyLayerDecision(unittest.TestCase):
         persist_layers(self.test_dir, layers)
 
         # Both fail
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=1), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=1), \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer(["unit"])
 
         self.assertEqual(result, 1)
@@ -418,7 +418,7 @@ class TestVerifyLayerDecision(unittest.TestCase):
 
     def test_all_pass_returns_clean(self):
         """Layer is CLEAN when all tests pass (in-scope and out-of-scope)."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -434,10 +434,10 @@ class TestVerifyLayerDecision(unittest.TestCase):
         ]
         persist_layers(self.test_dir, layers)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0), \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer(["unit"])
 
         self.assertEqual(result, 0)
@@ -457,7 +457,7 @@ class TestVerifyLayerDeferralRecord(unittest.TestCase):
 
     def test_deferred_failures_persisted_to_scope(self):
         """Out-of-scope failures are recorded in scope.json deferred_failures."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -475,10 +475,10 @@ class TestVerifyLayerDeferralRecord(unittest.TestCase):
         persist_layers(self.test_dir, layers)
 
         # In-scope passes, two out-of-scope fail
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', side_effect=lambda f: 0 if f == "tests/test_a.py" else 1), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', side_effect=lambda f: 0 if f == "tests/test_a.py" else 1), \
+             patch('lisa.commands.print_with_status'):
             verify_layer(["unit"])
 
         deferred = get_deferred_failures(self.test_dir)
@@ -487,7 +487,7 @@ class TestVerifyLayerDeferralRecord(unittest.TestCase):
 
     def test_no_deferred_failures_recorded_when_none(self):
         """No deferred failures recorded when all failures are in-scope."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -503,10 +503,10 @@ class TestVerifyLayerDeferralRecord(unittest.TestCase):
         persist_layers(self.test_dir, layers)
 
         # In-scope fails, no out-of-scope tests
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=1), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=1), \
+             patch('lisa.commands.print_with_status'):
             verify_layer(["unit"])
 
         deferred = get_deferred_failures(self.test_dir)
@@ -514,7 +514,7 @@ class TestVerifyLayerDeferralRecord(unittest.TestCase):
 
     def test_deferred_cleared_on_clean_run(self):
         """Previously deferred failures are cleared when a clean run has none."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -534,10 +534,10 @@ class TestVerifyLayerDeferralRecord(unittest.TestCase):
         persist_layers(self.test_dir, layers)
 
         # All pass now
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0), \
+             patch('lisa.commands.print_with_status'):
             verify_layer(["unit"])
 
         deferred = get_deferred_failures(self.test_dir)
@@ -556,7 +556,7 @@ class TestVerifyLayerFallbackWithoutLayers(unittest.TestCase):
 
     def test_fallback_to_in_scope_only(self):
         """Without layers.json, verify_layer runs only in-scope tests."""
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -567,10 +567,10 @@ class TestVerifyLayerFallbackWithoutLayers(unittest.TestCase):
         persist_scope(self.test_dir, scope)
         # No layers.json persisted
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0) as mock_run, \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0) as mock_run, \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer(["unit"])
 
         self.assertEqual(result, 0)

@@ -11,7 +11,7 @@ import json
 import tempfile
 import shutil
 
-from scripts.lisa.scope import (
+from lisa.scope import (
     load_scope,
     persist_scope,
     get_layer_status,
@@ -284,11 +284,11 @@ class TestVerifyLayerCommand(unittest.TestCase):
     def test_no_scope_returns_warning(self):
         """lisa verify-layer unit warns when no scope is set (AC4)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_layer(["unit"])
 
         self.assertEqual(result, 1)
@@ -298,10 +298,10 @@ class TestVerifyLayerCommand(unittest.TestCase):
     def test_no_args_shows_usage(self):
         """lisa verify-layer without args shows usage."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer([])
 
         self.assertEqual(result, 1)
@@ -309,7 +309,7 @@ class TestVerifyLayerCommand(unittest.TestCase):
     def test_blocks_integration_when_unit_not_clean(self):
         """lisa verify-layer integration is blocked when UNIT is not CLEAN (AC2)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -319,9 +319,9 @@ class TestVerifyLayerCommand(unittest.TestCase):
         }
         persist_scope(self.test_dir, scope)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_layer(["integration"])
 
         self.assertEqual(result, 1)
@@ -331,7 +331,7 @@ class TestVerifyLayerCommand(unittest.TestCase):
     def test_runs_scoped_unit_tests(self):
         """lisa verify-layer unit runs only in-scope UNIT tests (AC1)."""
         from unittest.mock import patch, call
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -341,10 +341,10 @@ class TestVerifyLayerCommand(unittest.TestCase):
         }
         persist_scope(self.test_dir, scope)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0) as mock_run, \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0) as mock_run, \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_layer(["unit"])
 
         self.assertEqual(result, 0)
@@ -357,7 +357,7 @@ class TestVerifyLayerCommand(unittest.TestCase):
     def test_layer_status_updated_to_clean(self):
         """Layer status is set to CLEAN when all tests pass (AC1)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -367,10 +367,10 @@ class TestVerifyLayerCommand(unittest.TestCase):
         }
         persist_scope(self.test_dir, scope)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0), \
+             patch('lisa.commands.print_with_status'):
             verify_layer(["unit"])
 
         status = get_layer_status(self.test_dir)
@@ -379,7 +379,7 @@ class TestVerifyLayerCommand(unittest.TestCase):
     def test_layer_status_updated_to_failing(self):
         """Layer status is set to FAILING when a test fails (AC1)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -390,10 +390,10 @@ class TestVerifyLayerCommand(unittest.TestCase):
         persist_scope(self.test_dir, scope)
 
         # First test passes, second fails
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', side_effect=[0, 1]), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', side_effect=[0, 1]), \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer(["unit"])
 
         self.assertEqual(result, 1)
@@ -403,7 +403,7 @@ class TestVerifyLayerCommand(unittest.TestCase):
     def test_layer_status_failing_includes_count(self):
         """When in-scope tests fail, the failure count is persisted (Story 7.5 AC3)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -414,10 +414,10 @@ class TestVerifyLayerCommand(unittest.TestCase):
         persist_scope(self.test_dir, scope)
 
         # First and third tests fail (2 in-scope failures)
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', side_effect=[1, 0, 1]), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', side_effect=[1, 0, 1]), \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer(["unit"])
 
         self.assertEqual(result, 1)
@@ -427,7 +427,7 @@ class TestVerifyLayerCommand(unittest.TestCase):
     def test_layer_status_clean_sets_count_zero(self):
         """When all in-scope tests pass, the failure count is 0 (Story 7.5 AC3)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -437,10 +437,10 @@ class TestVerifyLayerCommand(unittest.TestCase):
         }
         persist_scope(self.test_dir, scope)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0), \
+             patch('lisa.commands.print_with_status'):
             verify_layer(["unit"])
 
         counts = get_layer_failure_counts(self.test_dir)
@@ -449,7 +449,7 @@ class TestVerifyLayerCommand(unittest.TestCase):
     def test_integration_runs_after_unit_clean(self):
         """lisa verify-layer integration runs when UNIT is CLEAN (AC2)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -460,10 +460,10 @@ class TestVerifyLayerCommand(unittest.TestCase):
         persist_scope(self.test_dir, scope)
         update_layer_status(self.test_dir, "UNIT", "CLEAN")
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0) as mock_run, \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0) as mock_run, \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer(["integration"])
 
         self.assertEqual(result, 0)
@@ -472,11 +472,11 @@ class TestVerifyLayerCommand(unittest.TestCase):
     def test_mode_bypass_skips_verification(self):
         """verify-layer respects SPIKE/BYPASS_TDD modes."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=True), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=True), \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer(["unit"])
 
         self.assertEqual(result, 0)
@@ -495,7 +495,7 @@ class TestBackwardsCompatibility(unittest.TestCase):
     def test_verify_pass_explicit_file_with_scope_warning(self):
         """verify-pass with explicit file works but warns if outside scope (AC3)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_pass
+        from lisa.commands import verify_pass
 
         # Set a scope that does NOT include the explicit file
         scope = {
@@ -507,11 +507,11 @@ class TestBackwardsCompatibility(unittest.TestCase):
         }
         persist_scope(self.test_dir, scope)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0), \
-             patch('scripts.lisa.commands.run_story_complete'), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0), \
+             patch('lisa.commands.run_story_complete'), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_pass(["tests/test_unrelated.py"])
 
         self.assertEqual(result, 0)
@@ -521,7 +521,7 @@ class TestBackwardsCompatibility(unittest.TestCase):
     def test_verify_pass_explicit_file_in_scope_no_warning(self):
         """verify-pass with explicit file in scope does not warn."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_pass
+        from lisa.commands import verify_pass
 
         scope = {
             "in_scope_tests": {
@@ -532,11 +532,11 @@ class TestBackwardsCompatibility(unittest.TestCase):
         }
         persist_scope(self.test_dir, scope)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0), \
-             patch('scripts.lisa.commands.run_story_complete'), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0), \
+             patch('lisa.commands.run_story_complete'), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_pass(["tests/test_a.py"])
 
         self.assertEqual(result, 0)
@@ -546,7 +546,7 @@ class TestBackwardsCompatibility(unittest.TestCase):
     def test_verify_fail_explicit_file_outside_scope_warns(self):
         """verify-fail with explicit file outside scope emits warning (AC3)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_fail
+        from lisa.commands import verify_fail
 
         scope = {
             "in_scope_tests": {
@@ -557,10 +557,10 @@ class TestBackwardsCompatibility(unittest.TestCase):
         }
         persist_scope(self.test_dir, scope)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=1), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=1), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_fail(["tests/test_unrelated.py"])
 
         self.assertEqual(result, 0)  # Test failed as expected = success
@@ -570,13 +570,13 @@ class TestBackwardsCompatibility(unittest.TestCase):
     def test_verify_pass_no_scope_no_warning(self):
         """verify-pass without scope does not emit scope warning (AC3 backwards compat)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_pass
+        from lisa.commands import verify_pass
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0), \
-             patch('scripts.lisa.commands.run_story_complete'), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0), \
+             patch('lisa.commands.run_story_complete'), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_pass(["tests/test_a.py"])
 
         self.assertEqual(result, 0)
@@ -597,7 +597,7 @@ class TestLayerStatusCommand(unittest.TestCase):
     def test_shows_both_layers(self):
         """lisa layer-status shows UNIT and INTEGRATION states."""
         from unittest.mock import patch
-        from scripts.lisa.commands import layer_status_cmd
+        from lisa.commands import layer_status_cmd
 
         scope = {
             "in_scope_tests": {"UNIT": ["tests/test_a.py"], "INTEGRATION": []},
@@ -605,8 +605,8 @@ class TestLayerStatusCommand(unittest.TestCase):
         persist_scope(self.test_dir, scope)
         update_layer_status(self.test_dir, "UNIT", "CLEAN")
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = layer_status_cmd([])
 
         self.assertEqual(result, 0)
@@ -619,10 +619,10 @@ class TestLayerStatusCommand(unittest.TestCase):
     def test_warns_when_no_scope(self):
         """lisa layer-status warns when no scope is set."""
         from unittest.mock import patch
-        from scripts.lisa.commands import layer_status_cmd
+        from lisa.commands import layer_status_cmd
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = layer_status_cmd([])
 
         self.assertEqual(result, 0)
@@ -632,7 +632,7 @@ class TestLayerStatusCommand(unittest.TestCase):
     def test_shows_failure_count_when_failing(self):
         """lisa layer-status shows failure count when layer is FAILING (Story 7.5 AC3)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import layer_status_cmd
+        from lisa.commands import layer_status_cmd
 
         scope = {
             "in_scope_tests": {"UNIT": ["tests/test_a.py"], "INTEGRATION": []},
@@ -640,8 +640,8 @@ class TestLayerStatusCommand(unittest.TestCase):
         persist_scope(self.test_dir, scope)
         update_layer_status(self.test_dir, "UNIT", "FAILING", failure_count=3)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = layer_status_cmd([])
 
         self.assertEqual(result, 0)
@@ -653,7 +653,7 @@ class TestLayerStatusCommand(unittest.TestCase):
     def test_shows_clean_without_failure_count(self):
         """lisa layer-status shows CLEAN without a failure count (Story 7.5 AC3)."""
         from unittest.mock import patch
-        from scripts.lisa.commands import layer_status_cmd
+        from lisa.commands import layer_status_cmd
 
         scope = {
             "in_scope_tests": {"UNIT": ["tests/test_a.py"], "INTEGRATION": []},
@@ -661,8 +661,8 @@ class TestLayerStatusCommand(unittest.TestCase):
         persist_scope(self.test_dir, scope)
         update_layer_status(self.test_dir, "UNIT", "CLEAN", failure_count=0)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = layer_status_cmd([])
 
         self.assertEqual(result, 0)
@@ -684,7 +684,7 @@ class TestLayerProgressionIntegration(unittest.TestCase):
     def test_full_progression_unit_fail_block_fix_advance(self):
         """Full flow: UNIT fails -> blocks INTEGRATION -> UNIT passes -> INTEGRATION runs."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer, layer_status_cmd
+        from lisa.commands import verify_layer, layer_status_cmd
 
         scope = {
             "in_scope_tests": {
@@ -695,10 +695,10 @@ class TestLayerProgressionIntegration(unittest.TestCase):
         persist_scope(self.test_dir, scope)
 
         # Phase 1: UNIT fails — one of two tests fails
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', side_effect=[0, 1]), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', side_effect=[0, 1]), \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer(["unit"])
         self.assertEqual(result, 1)
 
@@ -709,9 +709,9 @@ class TestLayerProgressionIntegration(unittest.TestCase):
         self.assertEqual(counts["UNIT"], 1)
 
         # Phase 2: Attempt INTEGRATION — blocked by UNIT gate
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_layer(["integration"])
         self.assertEqual(result, 1)
         all_output = " ".join(str(c) for c in mock_print.call_args_list)
@@ -719,19 +719,19 @@ class TestLayerProgressionIntegration(unittest.TestCase):
         self.assertIn("1 in-scope failure", all_output.lower())
 
         # Phase 3: Fix and re-run UNIT — passes
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0), \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer(["unit"])
         self.assertEqual(result, 0)
         self.assertEqual(get_layer_status(self.test_dir)["UNIT"], "CLEAN")
 
         # Phase 4: INTEGRATION now allowed
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0), \
+             patch('lisa.commands.print_with_status'):
             result = verify_layer(["integration"])
         self.assertEqual(result, 0)
         self.assertEqual(get_layer_status(self.test_dir)["INTEGRATION"], "CLEAN")
@@ -739,7 +739,7 @@ class TestLayerProgressionIntegration(unittest.TestCase):
     def test_integration_failure_shows_guidance_and_status(self):
         """INTEGRATION fails -> fix-at-layer guidance + layer-status shows count."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer, layer_status_cmd
+        from lisa.commands import verify_layer, layer_status_cmd
 
         scope = {
             "in_scope_tests": {
@@ -751,10 +751,10 @@ class TestLayerProgressionIntegration(unittest.TestCase):
         update_layer_status(self.test_dir, "UNIT", "CLEAN", failure_count=0)
 
         # INTEGRATION: both tests fail
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=1), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=1), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_layer(["integration"])
 
         self.assertEqual(result, 1)
@@ -763,8 +763,8 @@ class TestLayerProgressionIntegration(unittest.TestCase):
         self.assertIn("do not revisit unit", all_output.lower())
 
         # layer-status reflects the count
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.print_with_status') as mock_print:
             layer_status_cmd([])
 
         all_output = " ".join(str(c) for c in mock_print.call_args_list)
@@ -776,7 +776,7 @@ class TestLayerProgressionIntegration(unittest.TestCase):
     def test_layer_status_reflects_full_lifecycle(self):
         """layer-status shows NOT_RUN -> FAILING -> CLEAN through a complete cycle."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer, layer_status_cmd
+        from lisa.commands import verify_layer, layer_status_cmd
 
         scope = {
             "in_scope_tests": {
@@ -792,10 +792,10 @@ class TestLayerProgressionIntegration(unittest.TestCase):
         self.assertEqual(status["INTEGRATION"], "NOT_RUN")
 
         # UNIT fails
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=1), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=1), \
+             patch('lisa.commands.print_with_status'):
             verify_layer(["unit"])
 
         status = get_layer_status(self.test_dir)
@@ -804,10 +804,10 @@ class TestLayerProgressionIntegration(unittest.TestCase):
         self.assertEqual(counts["UNIT"], 1)
 
         # UNIT passes
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0), \
-             patch('scripts.lisa.commands.print_with_status'):
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0), \
+             patch('lisa.commands.print_with_status'):
             verify_layer(["unit"])
 
         status = get_layer_status(self.test_dir)
@@ -829,7 +829,7 @@ class TestFixAtLayerGuidance(unittest.TestCase):
     def test_integration_failure_emits_fix_at_layer_guidance(self):
         """When INTEGRATION layer has in-scope failures, fix-at-layer guidance is emitted."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -840,10 +840,10 @@ class TestFixAtLayerGuidance(unittest.TestCase):
         persist_scope(self.test_dir, scope)
         update_layer_status(self.test_dir, "UNIT", "CLEAN")
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=1), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=1), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_layer(["integration"])
 
         self.assertEqual(result, 1)
@@ -854,7 +854,7 @@ class TestFixAtLayerGuidance(unittest.TestCase):
     def test_unit_failure_does_not_emit_fix_at_layer_guidance(self):
         """When UNIT layer fails, no fix-at-layer guidance is emitted."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -864,10 +864,10 @@ class TestFixAtLayerGuidance(unittest.TestCase):
         }
         persist_scope(self.test_dir, scope)
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=1), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=1), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_layer(["unit"])
 
         self.assertEqual(result, 1)
@@ -877,7 +877,7 @@ class TestFixAtLayerGuidance(unittest.TestCase):
     def test_integration_clean_does_not_emit_guidance(self):
         """When INTEGRATION passes, no fix-at-layer guidance is emitted."""
         from unittest.mock import patch
-        from scripts.lisa.commands import verify_layer
+        from lisa.commands import verify_layer
 
         scope = {
             "in_scope_tests": {
@@ -888,10 +888,10 @@ class TestFixAtLayerGuidance(unittest.TestCase):
         persist_scope(self.test_dir, scope)
         update_layer_status(self.test_dir, "UNIT", "CLEAN")
 
-        with patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir), \
-             patch('scripts.lisa.commands.check_mode_bypass', return_value=False), \
-             patch('scripts.lisa.commands.run_test', return_value=0), \
-             patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.find_project_root', return_value=self.test_dir), \
+             patch('lisa.commands.check_mode_bypass', return_value=False), \
+             patch('lisa.commands.run_test', return_value=0), \
+             patch('lisa.commands.print_with_status') as mock_print:
             result = verify_layer(["integration"])
 
         self.assertEqual(result, 0)

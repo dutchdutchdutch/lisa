@@ -4,8 +4,8 @@ import shutil
 import tempfile
 import json
 from unittest.mock import patch, MagicMock
-from scripts.lisa.state import StateManager
-from scripts.lisa.commands import turns, check_context
+from lisa.state import StateManager
+from lisa.commands import turns, check_context
 
 class TestTurnWatchdog(unittest.TestCase):
     
@@ -16,7 +16,7 @@ class TestTurnWatchdog(unittest.TestCase):
         # Create .lisa dir
         os.makedirs(".lisa", exist_ok=True)
         # Mock project root to be test_dir
-        self.patcher = patch('scripts.lisa.commands.find_project_root', return_value=self.test_dir)
+        self.patcher = patch('lisa.commands.find_project_root', return_value=self.test_dir)
         self.patcher.start()
         
     def tearDown(self):
@@ -30,14 +30,14 @@ class TestTurnWatchdog(unittest.TestCase):
         manager = StateManager(project_root=self.test_dir)
         manager.update("turn_count", 5)
         
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             result = turns([])
             self.assertEqual(result, 0)
             mock_print.assert_called_with("Current Turn: 5", status_icon="⏱️")
 
     def test_turns_set_explicit(self):
         """Should set turn count to explicit value when given a number."""
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             result = turns(["7"])
             self.assertEqual(result, 0)
             mock_print.assert_called_with("Turn Counter Set: 7", status_icon="⏱️")
@@ -49,12 +49,12 @@ class TestTurnWatchdog(unittest.TestCase):
 
     def test_turns_invalid_input(self):
         """Should reject non-numeric input."""
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             result = turns(["abc"])
             self.assertEqual(result, 1)
 
-    @patch('scripts.lisa.commands.scan_workspace')
-    @patch('scripts.lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.ConfigManager')
     def test_check_context_display(self, MockConfig, mock_scan):
         """Should display turn count and correct status icon."""
         # Setup Mocks
@@ -67,13 +67,13 @@ class TestTurnWatchdog(unittest.TestCase):
         manager = StateManager(project_root=self.test_dir)
         manager.update("turn_count", 5)
         
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             check_context([])
             mock_print.assert_any_call("Current Turn: 5", status_icon="🟢")
             mock_print.assert_any_call("Status: GREEN", status_icon="🟢")
 
-    @patch('scripts.lisa.commands.scan_workspace')
-    @patch('scripts.lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.ConfigManager')
     def test_check_context_traffic_light(self, MockConfig, mock_scan):
         """Should verify traffic light logic for turns (default & custom)."""
         mock_scan.return_value = (500, 5)
@@ -87,7 +87,7 @@ class TestTurnWatchdog(unittest.TestCase):
         
         # AMBER Test (15 >= 12)
         manager.update("turn_count", 15)
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             check_context([])
             mock_print.assert_any_call("Current Turn: 15", status_icon="🟡")
             mock_print.assert_any_call("Status: AMBER", status_icon="🟡")
@@ -95,7 +95,7 @@ class TestTurnWatchdog(unittest.TestCase):
 
         # RED Test (25 > 20)
         manager.update("turn_count", 25)
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             check_context([])
             mock_print.assert_any_call("Current Turn: 25", status_icon="🔴")
             mock_print.assert_any_call("Status: RED", status_icon="🔴")
@@ -112,7 +112,7 @@ class TestTurnWatchdog(unittest.TestCase):
         
         # Verify Custom AMBER (6 >= 5)
         manager.update("turn_count", 6)
-        with patch('scripts.lisa.commands.print_with_status') as mock_print:
+        with patch('lisa.commands.print_with_status') as mock_print:
             check_context([])
             mock_print.assert_any_call("Current Turn: 6", status_icon="🟡")
             mock_print.assert_any_call("WARNING: Approaching Turn Limit (5-10).", status_icon="🟡")

@@ -25,5 +25,5 @@ When a context reset is requested (`lisa reset`), you MUST think step-by-step:
 
 ## 4. Handoffs
 *   **Input:** User runs `lisa reset`.
-*   **Action:** Execute `scripts/lisa/archiver.py`.
+*   **Action:** Execute `lisa reset` (which runs the archiver internally).
 *   **Output:** "Session Archived to .lisa/archive/... System Ready."
