@@ -12,6 +12,18 @@ __pycache__/
 .lisa/state.json.lock
 .lisa/state.json.tmp
 .lisa/state.json.temp
+.lisa/lisa_state.json
+.lisa/lisa_state.json.lock
+.lisa/lisa_state.json.tmp
+.lisa/lisa_state.json.temp
+.lisa/lisa_data.json
+.lisa/lisa_data.json.lock
+.lisa/lisa_data.json.tmp
+.lisa/lisa_data.json.temp
+.lisa/lisa_storage.json
+.lisa/lisa_storage.json.lock
+.lisa/lisa_storage.json.tmp
+.lisa/lisa_storage.json.temp
 .lisa/context_cache.json
 .lisa/archive/
 
@@ -28,3 +40,4 @@ src/
 temp_subdir/
 tests/manual_fail.py
 scripts/lisa/.lisa/
+_bmad/

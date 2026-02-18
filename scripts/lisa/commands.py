@@ -13,7 +13,8 @@ from .hooks import LIFECYCLE_EVENTS, run_hooks, run_story_complete
 from .classifier import classify_file, classify_all, persist_layers, LAYER_UNIT, LAYER_INTEGRATION
 from .scope import (
     derive_modified_files_from_git, derive_scope, persist_scope, load_scope, clear_scope,
-    get_layer_status, update_layer_status, get_in_scope_tests_for_layer,
+    get_layer_status, update_layer_status, get_layer_failure_counts,
+    get_in_scope_tests_for_layer,
     check_layer_advancement, is_file_in_scope, get_all_tests_for_layer,
     record_deferred_failures, LAYER_ORDER,
     STATUS_CLEAN, STATUS_FAILING, STATUS_NOT_RUN,
@@ -958,7 +959,7 @@ def verify_layer(args):
 
     if not tests:
         print_with_status(f"No in-scope {layer} tests to run.", status_icon="ℹ️")
-        update_layer_status(project_root, layer, STATUS_CLEAN)
+        update_layer_status(project_root, layer, STATUS_CLEAN, failure_count=0)
         record_deferred_failures(project_root, layer, [])
         return 0
 
@@ -981,12 +982,18 @@ def verify_layer(args):
 
     # Display in-scope failures (main output)
     if in_scope_failures:
-        update_layer_status(project_root, layer, STATUS_FAILING)
+        update_layer_status(project_root, layer, STATUS_FAILING, failure_count=len(in_scope_failures))
         print_with_status(f"{layer} Layer: {len(in_scope_failures)} in-scope failure(s).", status_icon="🔴")
         for f in in_scope_failures:
             print_with_status(f"  FAILED: {f}", status_icon="🔴")
+        # AC2 (Story 7.5): Fix-at-layer guidance for INTEGRATION
+        if layer == LAYER_INTEGRATION:
+            print_with_status(
+                "Fix at the INTEGRATION layer. Do not revisit unit code unless a unit test also fails.",
+                status_icon="ℹ️"
+            )
     else:
-        update_layer_status(project_root, layer, STATUS_CLEAN)
+        update_layer_status(project_root, layer, STATUS_CLEAN, failure_count=0)
         print_with_status(f"{layer} Layer: All in-scope tests passed.", status_icon="🟢")
 
     # Display out-of-scope failures in deferred section (AC2)
@@ -1015,12 +1022,19 @@ def layer_status_cmd(args):
         print_with_status("No scope is set. Layer status is not available.", status_icon="ℹ️")
         return 0
 
+    failure_counts = get_layer_failure_counts(project_root) or {}
+
     print_with_status("Layer Status")
     print("---------------------------------------------------")
 
     for layer_name in LAYER_ORDER:
         layer_state = status.get(layer_name, STATUS_NOT_RUN)
         icon = "🟢" if layer_state == STATUS_CLEAN else "🔴" if layer_state == STATUS_FAILING else "⬜"
-        print_with_status(f"  {layer_name}: {layer_state}", status_icon=icon)
+        if layer_state == STATUS_FAILING:
+            count = failure_counts.get(layer_name, 0)
+            display = f"{layer_state} ({count} in-scope failure{'s' if count != 1 else ''})"
+        else:
+            display = layer_state
+        print_with_status(f"  {layer_name}: {display}", status_icon=icon)
 
     return 0

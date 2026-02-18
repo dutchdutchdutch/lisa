@@ -30,7 +30,7 @@ class StateManager:
         if state_file:
              self.state_file = state_file
         elif project_root:
-             primary = os.path.join(project_root, ".lisa", "state.json")
+             primary = os.path.join(project_root, ".lisa", "lisa_storage.json")
              if self._is_writable(primary):
                  self.state_file = primary
              else:
@@ -39,7 +39,7 @@ class StateManager:
         else:
              # Legacy: relative path, no project_root set. diagnose() may report
              # healthy but repair() requires project_root. No current callers use this path.
-             self.state_file = ".lisa/state.json"
+             self.state_file = ".lisa/lisa_storage.json"
              
         self.lock_file = f"{self.state_file}.lock"
         self._ensure_dir()
@@ -65,7 +65,7 @@ class StateManager:
         project_hash = hashlib.md5(project_root.encode()).hexdigest()[:12]
         fallback_dir = os.path.join(tempfile.gettempdir(), f".lisa-{project_hash}")
         os.makedirs(fallback_dir, exist_ok=True)
-        return os.path.join(fallback_dir, "state.json")
+        return os.path.join(fallback_dir, "lisa_storage.json")
 
     @property
     def _default_state(self):
@@ -87,7 +87,7 @@ class StateManager:
         if self.using_fallback and self.project_root not in StateManager._fallback_warned:
             StateManager._fallback_warned.add(self.project_root)
             print(
-                f"[⚠️] State file not writable at .lisa/state.json — "
+                f"[⚠️] State file not writable at .lisa/lisa_storage.json — "
                 f"using fallback: {self.state_file}\n"
                 f"[⚠️] State will NOT survive reboot. Run `lisa init --fix` to repair."
             )
@@ -236,7 +236,7 @@ class StateManager:
             return False, "Cannot repair: no project root set."
 
         lisa_dir = os.path.join(self.project_root, ".lisa")
-        primary = os.path.join(lisa_dir, "state.json")
+        primary = os.path.join(lisa_dir, "lisa_storage.json")
 
         # Step 1: Ensure .lisa/ directory exists with proper permissions
         try:
@@ -275,4 +275,4 @@ class StateManager:
             except OSError:
                 pass  # Best-effort cleanup
 
-        return True, "State storage repaired. Now using .lisa/state.json."
+        return True, "State storage repaired. Now using .lisa/lisa_storage.json."

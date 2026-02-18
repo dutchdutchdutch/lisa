@@ -58,7 +58,16 @@ Think step by step:
 1. **Start at UNIT.** When verification runs with a scope, only in-scope UNIT tests execute first.
 2. **UNIT must be clean.** If any in-scope UNIT test fails, LISA blocks advancement to INTEGRATION. Fix unit failures first.
 3. **Advance to INTEGRATION.** Once UNIT is clean, run `lisa verify-layer integration` to execute only in-scope INTEGRATION tests.
-4. **Layer status is tracked.** Each layer is in one of three states: `CLEAN` (all in-scope tests pass), `FAILING` (N failures), or `NOT_RUN`.
+4. **Layer status is tracked.** Each layer is in one of three states: `CLEAN` (all in-scope tests pass), `FAILING` (N in-scope failures), or `NOT_RUN`.
+
+### Fix at Layer (Isolated Incubation)
+
+Think step by step:
+
+1. **When INTEGRATION tests fail**, fix at the integration layer. Do not revisit unit code unless a unit test also fails.
+2. **Why?** Unit tests have already passed (the gate enforced this). Touching unit code risks breaking the clean UNIT layer, which would block you from running integration tests again.
+3. **Exception:** If a unit test *also* fails during the integration run, that signals a genuine cross-layer issue. In that case, drop back to the UNIT layer, fix the unit failure first, re-verify UNIT as clean, then return to INTEGRATION.
+4. **LISA enforces this.** When `verify-layer integration` detects in-scope failures, it explicitly instructs: "Fix at the INTEGRATION layer. Do not revisit unit code unless a unit test also fails."
 
 ### Layer Status Schema
 
@@ -69,9 +78,15 @@ Layer status is persisted in `.lisa/scope.json` alongside the scope data:
   "layer_status": {
     "UNIT": "CLEAN",
     "INTEGRATION": "NOT_RUN"
+  },
+  "layer_failure_counts": {
+    "UNIT": 0,
+    "INTEGRATION": 0
   }
 }
 ```
+
+Status values: `CLEAN` (all in-scope tests pass), `FAILING` (N in-scope failures), `NOT_RUN` (not yet executed). The `layer_failure_counts` records the exact number of in-scope failures for each layer, displayed in `lisa layer-status` output.
 
 ### Backwards Compatibility
 

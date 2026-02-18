@@ -198,7 +198,7 @@ def get_layer_status(project_root):
     }
 
 
-def update_layer_status(project_root, layer, status):
+def update_layer_status(project_root, layer, status, failure_count=None):
     """Update the status for a specific layer in the persisted scope."""
     scope = load_scope(project_root)
     if scope is None:
@@ -206,7 +206,23 @@ def update_layer_status(project_root, layer, status):
     if "layer_status" not in scope:
         scope["layer_status"] = {}
     scope["layer_status"][layer] = status
+
+    if "layer_failure_counts" not in scope:
+        scope["layer_failure_counts"] = {}
+    if failure_count is not None:
+        scope["layer_failure_counts"][layer] = failure_count
+    elif status == STATUS_CLEAN:
+        scope["layer_failure_counts"][layer] = 0
+
     persist_scope(project_root, scope)
+
+
+def get_layer_failure_counts(project_root):
+    """Get failure counts for each layer. Returns dict or None if no scope."""
+    scope = load_scope(project_root)
+    if scope is None:
+        return None
+    return scope.get("layer_failure_counts", {})
 
 
 def get_in_scope_tests_for_layer(project_root, layer):
@@ -245,7 +261,13 @@ def check_layer_advancement(project_root, target_layer):
         unit_status = status.get(LAYER_UNIT, STATUS_NOT_RUN)
         if unit_status == STATUS_CLEAN:
             return True, ""
-        return False, f"UNIT layer is not clean (status: {unit_status}). Resolve unit failures before integration testing."
+        failure_counts = scope.get("layer_failure_counts", {})
+        count = failure_counts.get(LAYER_UNIT, 0)
+        if count > 0:
+            count_detail = f", {count} in-scope failure{'s' if count != 1 else ''}"
+        else:
+            count_detail = ""
+        return False, f"UNIT layer is not clean (status: {unit_status}{count_detail}). Resolve unit failures before integration testing."
 
     return False, f"Unknown layer: {target_layer}"
 
