@@ -1,7 +1,7 @@
 
 ---
-name: Token Analysis
-description: Allows agents to check their current workspace token usage and health status.
+name: analyzing-tokens
+description: Checks current workspace token usage and context health status. Use when the agent is about to write large files, after significant code generation, or to determine if a context reset is needed.
 ---
 
 # Token Analysis (The Scale)

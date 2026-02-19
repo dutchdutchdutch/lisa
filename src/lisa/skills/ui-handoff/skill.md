@@ -1,3 +1,8 @@
+---
+name: handing-off-ui-tests
+description: Generates a targeted manual UI test script for the developer once all automated test layers are clean. Use when unit and integration tests pass and the story requires visual or interactive UI verification.
+---
+
 # UI Test Handoff (Manual Verification Script)
 
 ## Purpose

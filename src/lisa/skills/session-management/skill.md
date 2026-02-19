@@ -1,6 +1,6 @@
 ---
-name: Session Management
-description: Manages the lifecycle of a LISA session, including context reset and archival.
+name: managing-sessions
+description: Manages the lifecycle of a LISA session, including context reset and archival. Use when the user runs lisa reset, a context window needs to be cleared, or session state needs to be archived for recovery.
 ---
 
 # Skill: Session Management (The Governor)

@@ -1,3 +1,8 @@
+---
+name: classifying-test-layers
+description: Classifies test files into layers (UNIT, INTEGRATION) so LISA can enforce execution order and scope tests to the current story. Use when setting up a new project, adding test files, or when layer classification is missing.
+---
+
 # Test Layer Classification
 
 ## Purpose

@@ -1,3 +1,8 @@
+---
+name: deriving-scope
+description: Derives the test scope for the current story from modified files and their dependency cone, restricting test execution to relevant tests only. Use when starting a new story, after modifying source files, or when running lisa scope.
+---
+
 # Scope Derivation (The Scope Guard)
 
 ## Purpose

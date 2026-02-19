@@ -1,5 +1,6 @@
 ---
-description: Enforce long-term memory by persisting state to `todo.md`.
+name: externalizing-state
+description: Persists agent working memory to todo.md for long-term storage and session recovery. Use when starting a new session, completing a unit of work, or preparing for a context reset.
 ---
 
 # Externalizer Skill

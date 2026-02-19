@@ -1,6 +1,6 @@
 ---
-name: Polish Pass
-description: Systematic epic-level code quality sweep that detects and resolves cross-cutting issues accumulated across multiple stories.
+name: polishing-code
+description: Performs a systematic epic-level code quality sweep that detects and resolves cross-cutting issues accumulated across multiple stories. Use when an epic is complete, a sprint retrospective identifies quality debt, or the tech lead requests a polish round.
 ---
 
 # Polish Pass: Epic Hygiene Sweep

@@ -19,6 +19,13 @@
 
 ---
 
+## **Phase 1.5: YAML Frontmatter Standards**
+The `SKILL.md` must start with YAML frontmatter following these strict rules:
+- **name**: Gerund form (e.g., `testing-code`, `managing-databases`). Max 64 chars. Lowercase, numbers, and hyphens only. No "claude" or "anthropic" in the name.
+- **description**: Written in **third person**. Must include specific triggers/keywords. Max 1024 chars. (e.g., "Extracts text from PDFs. Use when the user mentions document processing or PDF files.")
+
+---
+
 ## **Phase 2: The Skeleton (Low-Code Structure)**
 *Goal: Enforce structure and externalize memory to prevent drift.*
 

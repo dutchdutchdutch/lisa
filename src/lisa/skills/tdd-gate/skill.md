@@ -1,6 +1,6 @@
 ---
-name: LISA TDD
-description: Enforces strict Test-Driven Development (Red-Green-Refactor) using LISA verification tools.
+name: enforcing-tdd
+description: Enforces strict Test-Driven Development (Red-Green-Refactor) using LISA verification tools. Use when the agent is implementing a story, fixing a bug, or writing any production code that requires a failing test first.
 ---
 
 # LISA TDD: The Iron Law of Context Purity

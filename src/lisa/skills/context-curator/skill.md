@@ -1,5 +1,6 @@
 ---
-description: Maintain context hygiene by summarizing conversation history when thresholds are breached.
+name: curating-context
+description: Maintains context hygiene by summarizing and compacting conversation history when token usage thresholds are breached. Use when context usage exceeds 70%, the user requests a summary or compaction, or the conversation becomes unwieldy.
 ---
 
 # Context Curator Skill

@@ -1,6 +1,6 @@
 ---
-name: LISA Refactor Gate
-description: Enforces code quality and prevents regressions by guiding the agent through a structured Refactor and Impact Verification process.
+name: gating-refactors
+description: Enforces code quality and prevents regressions by guiding the agent through a structured refactor and impact verification process. Use when a task implementation is complete, tests are green, and the code needs cleanup before marking done.
 ---
 
 # LISA Refactor Gate: Quality & Stability
