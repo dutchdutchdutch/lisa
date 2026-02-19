@@ -152,7 +152,7 @@ class TestContextSizeOutputContract(unittest.TestCase):
         all_output = " ".join(str(c) for c in mock_print.call_args_list)
 
         required_fields = [
-            "Context Metrics",
+            "Workspace Metrics (On-Disk)",
             "Token Count:",
             "File Count:",
             "Turn Count:",

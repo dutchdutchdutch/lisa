@@ -3,7 +3,7 @@ import os
 import tempfile
 import shutil
 from unittest.mock import patch, MagicMock
-from lisa.commands import context_status, context_size, context_health
+from lisa.commands import context_status, context_size, context_health, workspace_size
 from lisa.state import ContextActivity
 
 class TestContextCommands(unittest.TestCase):
@@ -92,6 +92,111 @@ class TestContextCommands(unittest.TestCase):
                 
                 # Check for disclaimer in standard print
                 mock_print.assert_any_call("    Approximation method across models for watchdog purposes. Not billing grade accurate.")
+
+    # --- Story 7.10: Workspace Size Awareness ---
+
+    @patch('lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
+    def test_workspace_size_output(self, mock_find_root, mock_scan, MockConfig):
+        """AC1: Should display workspace token count, file count, and usage percentage."""
+        mock_find_root.return_value = self.test_dir
+        mock_scan.return_value = (5000, 50)
+
+        mock_config = {"context_limit": 160000}
+        MockConfig.return_value.load.return_value = mock_config
+
+        with patch('builtins.print') as mock_raw_print:
+            with patch('lisa.commands.print_with_status') as mock_print:
+                ret_code = workspace_size([])
+                self.assertEqual(ret_code, 0)
+                # AC1: Labeled as "Workspace Size"
+                mock_print.assert_any_call("Workspace Size (On-Disk)")
+                # AC1: Token count with limit
+                mock_print.assert_any_call("Token Count: 5000 / 160000", status_icon="📊")
+                # AC1: File count
+                mock_print.assert_any_call("File Count:  50", status_icon="📂")
+                # AC1: Usage percentage
+                mock_print.assert_any_call("Usage:       3.1%", status_icon="🟢")
+                # Disclaimer present
+                mock_raw_print.assert_any_call("    Approximation method across models for watchdog purposes. Not billing grade accurate.")
+
+    @patch('lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
+    def test_workspace_size_amber(self, mock_find_root, mock_scan, MockConfig):
+        """AC1: Should show amber icon when usage is 70-90%."""
+        mock_find_root.return_value = self.test_dir
+        mock_scan.return_value = (120000, 100)
+
+        mock_config = {"context_limit": 160000}
+        MockConfig.return_value.load.return_value = mock_config
+
+        with patch('builtins.print'):
+            with patch('lisa.commands.print_with_status') as mock_print:
+                ret_code = workspace_size([])
+                self.assertEqual(ret_code, 0)
+                mock_print.assert_any_call("Usage:       75.0%", status_icon="🟡")
+
+    @patch('lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
+    def test_workspace_size_red(self, mock_find_root, mock_scan, MockConfig):
+        """AC1: Should show red icon when usage exceeds 90%."""
+        mock_find_root.return_value = self.test_dir
+        mock_scan.return_value = (150000, 200)
+
+        mock_config = {"context_limit": 160000}
+        MockConfig.return_value.load.return_value = mock_config
+
+        with patch('builtins.print'):
+            with patch('lisa.commands.print_with_status') as mock_print:
+                ret_code = workspace_size([])
+                self.assertEqual(ret_code, 0)
+                mock_print.assert_any_call("Usage:       93.8%", status_icon="🔴")
+
+    @patch('lisa.commands.find_project_root')
+    def test_workspace_size_no_project_root(self, mock_find_root):
+        """Should return 1 when no project root found."""
+        mock_find_root.side_effect = FileNotFoundError("No project root")
+
+        with patch('lisa.commands.print_with_status') as mock_print:
+            ret_code = workspace_size([])
+            self.assertEqual(ret_code, 1)
+            mock_print.assert_any_call("Error: Could not determine project root.", status_icon="🔴")
+
+    @patch('lisa.commands.ConfigManager')
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
+    def test_workspace_size_uses_context_limit(self, mock_find_root, mock_scan, MockConfig):
+        """AC4: Should use context_limit from config as workspace token budget."""
+        mock_find_root.return_value = self.test_dir
+        mock_scan.return_value = (50000, 30)
+
+        mock_config = {"context_limit": 100000}
+        MockConfig.return_value.load.return_value = mock_config
+
+        with patch('builtins.print'):
+            with patch('lisa.commands.print_with_status') as mock_print:
+                ret_code = workspace_size([])
+                self.assertEqual(ret_code, 0)
+                # Uses custom context_limit as budget
+                mock_print.assert_any_call("Token Count: 50000 / 100000", status_icon="📊")
+                mock_print.assert_any_call("Usage:       50.0%", status_icon="🟢")
+
+    @patch('lisa.commands.scan_workspace')
+    @patch('lisa.commands.find_project_root')
+    def test_context_size_backward_compat(self, mock_find_root, mock_scan):
+        """AC3: context_size still works and shows workspace (on-disk) label."""
+        mock_find_root.return_value = self.test_dir
+        mock_scan.return_value = (500, 10)
+
+        with patch('lisa.commands.print_with_status') as mock_print:
+            ret_code = context_size([])
+            self.assertEqual(ret_code, 0)
+            # AC3: Output clarifies these are workspace metrics
+            mock_print.assert_any_call("Workspace Metrics (On-Disk)")
+
 
 if __name__ == "__main__":
     unittest.main()

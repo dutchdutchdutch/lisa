@@ -116,7 +116,7 @@ LISA uses a hierarchical configuration system.
 {
   "strictness": "strict",
   "spike_mode_allowed": true,
-  "context_limit": 160000,
+  "context_limit": 100000,
   "context_check_interval": 600,
   "scan_ignores": [],
   "hooks_mode": "auto",
@@ -136,13 +136,13 @@ LISA uses a hierarchical configuration system.
 |-----|---------|-------------|
 | `strictness` | `"strict"` | TDD enforcement level |
 | `spike_mode_allowed` | `true` | Whether spike mode is permitted |
-| `context_limit` | `160000` | Token threshold for context alerts (~80% of model context window) |
+| `context_limit` | `100000` | Workspace token budget — the point where an agent should be selective about file loading |
 | `context_check_interval` | `600` | Seconds between lazy context checks |
 | `hooks_mode` | `"auto"` | `"auto"` runs remediation automatically; `"interactive"` prompts first |
 | `scan_ignores` | `[]` | Additional directories/files to exclude from workspace scans (extends built-in defaults) |
 | `lifecycle_hooks` | (see above) | Map of lifecycle events to LISA commands |
 
-> **Recommendation:** Avoid setting `context_limit` to the full model context window (e.g., 200K). LISA recommends reserving ~20% as buffer for context management tasks (compaction, summarization) and last-minute remediations. The default of 160,000 reflects ~80% of a 200K context window.
+> **Note:** `context_limit` is a **workspace size budget** (files on disk), not a model context window limit. The default of 100,000 tokens is roughly where an agent needs to be disciplined about selective file loading. Adjust based on your project size. For context window pressure signals, see `lisa context health` which uses turn-based metrics.
 
 ### Scan Exclusions
 
@@ -262,6 +262,31 @@ lisa context
     *   **Token Count**: Estimated tokens in the workspace.
     *   **Usage %**: Percentage of the configured `context_limit`.
 *   **Automatic Checks**: LISA automatically checks this in the background (Lazy Check) and updates the Traffic Light on every command.
+
+### `lisa workspace`
+
+**Purpose**: Reports the token footprint of your project's source files on disk. Use this to understand whether the project is large enough to risk overwhelming an agent's context window if loaded carelessly.
+
+**Usage**:
+
+```bash
+lisa workspace
+```
+
+*   **Output includes**:
+    *   **Token Count**: Estimated tokens across all source files (with configured budget).
+    *   **File Count**: Number of files scanned.
+    *   **Usage %**: Percentage of the configured `context_limit` with color-coded icon.
+*   **Important**: This measures files on disk, not the agent's active context window. A large workspace doesn't mean your context is full — it means you should be selective about what you load.
+
+**Workspace Size Thresholds**:
+
+| Workspace Size | Agent Impact | Action |
+|---|---|---|
+| < 50K tokens | Agent can read most files comfortably | No concerns |
+| 50K - 100K tokens | Agent needs to be selective about file loading | Use targeted reads |
+| 100K - 300K tokens | Agent cannot hold the full project picture | Load only relevant modules |
+| 300K+ tokens | Single-agent reasoning breaks down | Consider splitting into components |
 
 ### `lisa reset`
 

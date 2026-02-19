@@ -595,9 +595,44 @@ def context_status(args):
     print_with_status(f"Current Activity: {display_activity}", status_icon="ℹ️")
     return 0
 
+def workspace_size(args):
+    """
+    Reports workspace size metrics (token footprint of project files on disk).
+    Usage: lisa workspace
+    """
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root.", status_icon="🔴")
+        return 1
+
+    print_with_status("Workspace Size (On-Disk)")
+    print("---------------------")
+
+    config = ConfigManager(project_root=project_root).load()
+    limit = config.get("context_limit", 20000)
+    ignores = build_ignores(config)
+    token_count, file_count = scan_workspace(project_root, ignores=ignores)
+
+    percentage = (token_count / limit) * 100 if limit > 0 else 0
+
+    # Determine health icon based on workspace usage
+    ws_icon = "🟢"
+    if percentage > 90:
+        ws_icon = "🔴"
+    elif percentage >= 70:
+        ws_icon = "🟡"
+
+    print_with_status(f"Token Count: {token_count} / {limit}", status_icon="📊")
+    print("    Approximation method across models for watchdog purposes. Not billing grade accurate.")
+    print_with_status(f"File Count:  {file_count}", status_icon="📂")
+    print_with_status(f"Usage:       {percentage:.1f}%", status_icon=ws_icon)
+    return 0
+
+
 def context_size(args):
     """
-    Reports quantitative context metrics.
+    Reports quantitative context metrics (workspace on-disk).
     Usage: lisa context size
     """
     try:
@@ -606,7 +641,7 @@ def context_size(args):
         print_with_status("Error: Could not determine project root.", status_icon="🔴")
         return 1
 
-    print_with_status("Context Metrics")
+    print_with_status("Workspace Metrics (On-Disk)")
     print("---------------------")
 
     config = ConfigManager(project_root=project_root).load()
