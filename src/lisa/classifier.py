@@ -9,7 +9,7 @@ import json
 import os
 import fnmatch
 
-from .utils import DEFAULT_IGNORES
+from .utils import DEFAULT_IGNORES, is_ignored
 
 LAYER_UNIT = "UNIT"
 LAYER_INTEGRATION = "INTEGRATION"
@@ -31,7 +31,7 @@ def discover_test_files(project_root):
     """Walk the project and return relative paths to all test files."""
     test_files = []
     for root, dirs, files in os.walk(project_root):
-        dirs[:] = [d for d in dirs if d not in DEFAULT_IGNORES]
+        dirs[:] = [d for d in dirs if not is_ignored(d, DEFAULT_IGNORES)]
         for f in files:
             if not f.endswith(".py"):
                 continue

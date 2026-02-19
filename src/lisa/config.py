@@ -11,6 +11,7 @@ class ConfigManager:
         "context_check_interval": 600,
         "external_state_file": "todo.md",
         "external_state_ttl": 600,
+        "scan_ignores": [],
         "hooks_mode": "auto",
         "lifecycle_hooks": {
             "story-kickoff": [],

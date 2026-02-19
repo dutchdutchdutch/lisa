@@ -70,8 +70,8 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 **Initialization Command:**
 
 ```bash
-mkdir -p .lisa/hooks src/lisa src/lisa/skills/tdd-gate
-touch .lisa/config.json src/lisa/skills/tdd-gate/skill.md
+mkdir -p .lisa/hooks .agent/lisa .agent/lisa/skills/tdd-gate
+touch .lisa/config.json .agent/lisa/skills/tdd-gate/skill.md
 # Core logic: Skill Markdown + Python Tools
 ```
 
@@ -117,7 +117,7 @@ touch .lisa/config.json src/lisa/skills/tdd-gate/skill.md
 
 ### Infrastructure & Deployment
 *   **Decision:** Repo-based Distribution (Phase 1).
-*   **Pattern:** Scripts committed to `src/lisa`.
+*   **Pattern:** Scripts committed to `.agent/lisa`.
 *   **Rationale:** "Walking Skeleton" approach. External dependencies (like `pytest`) are permitted where they add significant value over standard library, provided they are documented.
 
 ### Decision Impact Analysis
@@ -225,13 +225,13 @@ touch .lisa/config.json src/lisa/skills/tdd-gate/skill.md
 ### Requirements to Structure Mapping
 
 **Feature Mapping:**
-*   **Workflow Enforcement (FR1-FR4):** Implemented in `src/lisa/commands.py`
-*   **Context Governance (FR5-FR7):** Implemented in `src/lisa/context_stats.py` and `src/lisa/archiver.py`
+*   **Workflow Enforcement (FR1-FR4):** Implemented in `.agent/lisa/commands.py`
+*   **Context Governance (FR5-FR7):** Implemented in `.agent/lisa/context_stats.py` and `.agent/lisa/archiver.py`
 *   **User Interaction (FR8-FR9):** Implemented in `main.py` (Output Formatting)
 
 **Cross-Cutting Concerns:**
 *   **Observability:** `[LISA]` prefix handling in `main.py`.
-*   **Configuration:** `src/lisa/config.py` module.
+*   **Configuration:** `.agent/lisa/config.py` module.
 
 ## Architecture Validation Results
 
@@ -242,7 +242,7 @@ touch .lisa/config.json src/lisa/skills/tdd-gate/skill.md
 
 ### Requirements Coverage Validation ✅
 *   **Workflow Gates (FR1-FR4):** Covered by `lisa.sh` hook logic.
-*   **Context Governance (FR5-FR7):** Covered by `src/lisa/context_stats.py`.
+*   **Context Governance (FR5-FR7):** Covered by `.agent/lisa/context_stats.py`.
 *   **Traffic Light (FR8):** Covered by `main.py`.
 *   **Zero-Dependency (NFR):** Relaxed in Epic 5 to support `tiktoken`. Now "Low-Dependency".
 

@@ -4,7 +4,7 @@ set -eo pipefail
 # LISA - Layered Isolated Scoped Agent
 # The Context Governance Tool
 
-VERSION="0.1.0"
+VERSION="0.2.2"
 
 show_help() {
     echo "LISA - Context Governance Tool v$VERSION"

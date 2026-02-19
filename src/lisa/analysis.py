@@ -2,7 +2,7 @@ import ast
 import os
 from pathlib import Path
 
-from .utils import DEFAULT_IGNORES
+from .utils import DEFAULT_IGNORES, is_ignored
 
 def get_module_name(file_path, project_root):
     """
@@ -38,7 +38,7 @@ def find_importers(target_file, project_root=None):
     # Walk through the project
     for root, dirs, files in os.walk(project_root):
         # Modify dirs in-place to skip ignored directories
-        dirs[:] = [d for d in dirs if d not in DEFAULT_IGNORES]
+        dirs[:] = [d for d in dirs if not is_ignored(d, DEFAULT_IGNORES)]
             
         for file in files:
             if not file.endswith(".py"):

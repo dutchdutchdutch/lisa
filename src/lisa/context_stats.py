@@ -4,12 +4,17 @@ import math
 import json
 import time
 
-# Default ignores to prevent scanning massive generated directories
-DEFAULT_IGNORES = [
-    ".git", ".lisa", ".bmad", "__pycache__", "node_modules", "venv", ".env",
-    ".DS_Store", "dist", "build", "coverage", ".pytest_cache",
-    "_bmad"
-]
+from .utils import DEFAULT_IGNORES, is_ignored
+
+
+def build_ignores(config=None):
+    """Merge DEFAULT_IGNORES with user/project scan_ignores from config."""
+    ignores = list(DEFAULT_IGNORES)
+    if config:
+        extra = config.get("scan_ignores", [])
+        if extra:
+            ignores.extend(extra)
+    return ignores
 
 CACHE_FILE = ".lisa/context_cache.json"
 MAX_FILE_SIZE = 10 * 1024 * 1024 # 10MB
@@ -69,10 +74,10 @@ def scan_workspace(root_dir, ignores=None):
     
     for root, dirs, files in os.walk(root_dir):
         # Modify dirs in-place to skip ignored directories
-        dirs[:] = [d for d in dirs if d not in ignores]
-        
+        dirs[:] = [d for d in dirs if not is_ignored(d, ignores)]
+
         for file in files:
-            if file in ignores:
+            if is_ignored(file, ignores):
                 continue
                 
             file_path = os.path.join(root, file)
@@ -187,7 +192,8 @@ def get_cached_health_icon():
             if 'root' not in locals():
                  root = find_project_root(os.getcwd()) # Fallback
 
-            token_count, _ = scan_workspace(root)
+            ignores = build_ignores(config)
+            token_count, _ = scan_workspace(root, ignores=ignores)
             health = get_context_health(token_count, limit)
             update_cache(token_count, health)
         except Exception:

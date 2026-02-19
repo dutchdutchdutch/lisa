@@ -5,7 +5,7 @@ from .runner import run_test
 from .archiver import archive_session, reset_session
 from .analysis import find_importers
 from .utils import find_project_root
-from .context_stats import scan_workspace, get_context_health, update_cache, get_cached_health_icon, get_cache_status
+from .context_stats import scan_workspace, get_context_health, update_cache, get_cached_health_icon, get_cache_status, build_ignores
 from .config import ConfigManager
 from .logger import print_with_status
 from .state import StateManager, LISA_MODES, ContextActivity
@@ -343,7 +343,8 @@ def check_context(args):
         file_count = "N/A (Cached)" 
     else:
         print_with_status(f"Scanning workspace: {project_root}")
-        token_count, file_count = scan_workspace(project_root)
+        ignores = build_ignores(config)
+        token_count, file_count = scan_workspace(project_root, ignores=ignores)
         health = get_context_health(token_count, limit)
         update_cache(token_count, health)
 
@@ -607,8 +608,10 @@ def context_size(args):
 
     print_with_status("Context Metrics")
     print("---------------------")
-    
-    token_count, file_count = scan_workspace(project_root)
+
+    config = ConfigManager(project_root=project_root).load()
+    ignores = build_ignores(config)
+    token_count, file_count = scan_workspace(project_root, ignores=ignores)
     
     state_manager = StateManager(project_root=project_root)
     state_manager.warn_if_fallback()
@@ -633,9 +636,10 @@ def context_health(args):
 
     config = ConfigManager(project_root=project_root).load()
     limit = config.get("context_limit", 20000)
-    
-    token_count, _ = scan_workspace(project_root)
-    
+
+    ignores = build_ignores(config)
+    token_count, _ = scan_workspace(project_root, ignores=ignores)
+
     from .drift_detection import DriftDetector
     detector = DriftDetector(token_count, limit)
     report = detector.check_health()

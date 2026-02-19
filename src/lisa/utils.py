@@ -1,7 +1,43 @@
+import fnmatch
 import os
 from pathlib import Path
 
-DEFAULT_IGNORES = [".git", ".lisa", "__pycache__", "node_modules", "venv", ".env", ".bmad"]
+DEFAULT_IGNORES = [
+    # Version control / tooling
+    ".git", ".lisa", ".bmad", "_bmad", ".agent",
+    # Python
+    "__pycache__", "venv", ".venv", "env", ".env",
+    ".tox", ".nox", ".mypy_cache", ".ruff_cache", ".pytest_cache",
+    ".eggs", "*.egg-info", "htmlcov", "site-packages",
+    # JS / Node / package managers
+    "node_modules", ".npm", ".npm-custom-cache", ".pnpm-store",
+    # JS frameworks (build & cache dirs)
+    ".next", ".nuxt", ".output", ".svelte-kit", ".angular",
+    ".turbo", ".parcel-cache", ".cache", ".docusaurus", "storybook-static",
+    # Mobile / cross-platform
+    ".expo", ".dart_tool", ".flutter-plugins", ".flutter-plugins-dependencies",
+    "Pods", ".gradle", "DerivedData", "*.xcarchive",
+    # JVM / Kotlin
+    ".kotlin", ".kotlinc", ".idea", "*.iml",
+    # Build artifacts
+    "dist", "build", "coverage", "out", "target",
+    # Data / databases
+    "data", "*.db", "*.sqlite", "*.sqlite3", "*.mdb", "*.accdb",
+    "*.dbf", "*.ldb", "*.rdb", "dump.rdb",
+    # OS
+    ".DS_Store",
+]
+
+def is_ignored(name, ignores):
+    """Check if a file/dir name matches any ignore pattern (exact or glob)."""
+    for pattern in ignores:
+        if '*' in pattern or '?' in pattern:
+            if fnmatch.fnmatch(name, pattern):
+                return True
+        elif name == pattern:
+            return True
+    return False
+
 
 def find_project_root(start_path: str = None) -> str:
     """

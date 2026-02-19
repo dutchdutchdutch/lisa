@@ -4,7 +4,7 @@ This guide provides detailed instructions on how to use LISA (Layered Isolated S
 
 ## Installation
 
-LISA is designed as a zero-dependency drop-in tool. It installs under `src/lisa/`.
+LISA is designed as a zero-dependency drop-in tool. It installs under `.agent/lisa/`, separate from your project's own source code.
 
 ### Prerequisites
 
@@ -18,9 +18,9 @@ Install LISA into a single project, versioned with the repository so the whole t
 1. **Copy files:**
 
     ```bash
-    mkdir -p src
-    cp -r <lisa-source> src/lisa
-    chmod +x src/lisa/lisa.sh
+    mkdir -p .agent
+    cp -r <lisa-source> .agent/lisa
+    chmod +x .agent/lisa/lisa.sh
     ```
 
 2. **Install dependencies:**
@@ -34,7 +34,7 @@ Install LISA into a single project, versioned with the repository so the whole t
 3. **Set up an alias** (recommended):
 
     ```bash
-    alias lisa='./src/lisa/lisa.sh'
+    alias lisa='./.agent/lisa/lisa.sh'
     ```
 
     Add this to your shell profile (`.bashrc`, `.zshrc`) or a project-level `.envrc`.
@@ -54,15 +54,15 @@ Install LISA once and use it across all projects. Useful for personal workflows 
 1. **Copy files to a global location:**
 
     ```bash
-    mkdir -p ~/src
-    cp -r <lisa-source> ~/src/lisa
-    chmod +x ~/src/lisa/lisa.sh
+    mkdir -p ~/.agent
+    cp -r <lisa-source> ~/.agent/lisa
+    chmod +x ~/.agent/lisa/lisa.sh
     ```
 
 2. **Add to PATH or create a global alias:**
 
     ```bash
-    alias lisa='~/src/lisa/lisa.sh'
+    alias lisa='~/.agent/lisa/lisa.sh'
     ```
 
     Add this to your shell profile (`.bashrc`, `.zshrc`).
@@ -85,7 +85,7 @@ Install LISA once and use it across all projects. Useful for personal workflows 
 
 ```
 project-root/
-├── src/
+├── .agent/
 │   └── lisa/               # LISA - context governance
 │       ├── lisa.sh         # shell entry point
 │       ├── __main__.py
@@ -101,7 +101,7 @@ project-root/
 └── ...
 ```
 
-> All examples in this guide assume the `lisa` alias is configured. If not using the alias, substitute `./src/lisa/lisa.sh` for `lisa`.
+> All examples in this guide assume the `lisa` alias is configured. If not using the alias, substitute `./.agent/lisa/lisa.sh` for `lisa`.
 
 ## Configuration
 
@@ -118,6 +118,7 @@ LISA uses a hierarchical configuration system.
   "spike_mode_allowed": true,
   "context_limit": 160000,
   "context_check_interval": 600,
+  "scan_ignores": [],
   "hooks_mode": "auto",
   "lifecycle_hooks": {
     "story-kickoff": [],
@@ -138,9 +139,26 @@ LISA uses a hierarchical configuration system.
 | `context_limit` | `160000` | Token threshold for context alerts (~80% of model context window) |
 | `context_check_interval` | `600` | Seconds between lazy context checks |
 | `hooks_mode` | `"auto"` | `"auto"` runs remediation automatically; `"interactive"` prompts first |
+| `scan_ignores` | `[]` | Additional directories/files to exclude from workspace scans (extends built-in defaults) |
 | `lifecycle_hooks` | (see above) | Map of lifecycle events to LISA commands |
 
 > **Recommendation:** Avoid setting `context_limit` to the full model context window (e.g., 200K). LISA recommends reserving ~20% as buffer for context management tasks (compaction, summarization) and last-minute remediations. The default of 160,000 reflects ~80% of a 200K context window.
+
+### Scan Exclusions
+
+LISA's workspace scanner estimates token count by reading all text files in your project. To avoid inflated counts, LISA automatically skips these directories:
+
+`.git`, `.lisa`, `.bmad`, `_bmad`, `.agent`, `__pycache__`, `venv`, `.venv`, `env`, `.env`, `.tox`, `.nox`, `.mypy_cache`, `.ruff_cache`, `.pytest_cache`, `.eggs`, `*.egg-info`, `htmlcov`, `site-packages`, `node_modules`, `dist`, `build`, `coverage`, `out`, `target`, `.DS_Store`
+
+If your project has additional directories that should be excluded (data directories, vendor folders, generated code, etc.), add them to `scan_ignores` in your project's `.lisa/config.json`:
+
+```json
+{
+  "scan_ignores": ["data", "vendor", "generated", "logs", ".terraform"]
+}
+```
+
+These are merged with the built-in defaults — you only need to list what's not already covered.
 
 ## Commands
 
@@ -373,5 +391,5 @@ lisa context health
 -   **"Context Limit Exceeded"**: Run `lisa reset` to archive and clear your session.
 -   **"[🔴] Context Red"**: Your workspace is too large. Clean up files or run `lisa reset`.
 -   **"Please fix permissions on .lisa/"**: Check file permissions on the `.lisa/` directory. LISA requires read/write access.
--   **"Polish Pass skill not found"**: Ensure `src/lisa/skills/polish-pass/skill.md` exists relative to your project root.
+-   **"Polish Pass skill not found"**: Ensure `.agent/lisa/skills/polish-pass/skill.md` exists relative to your project root.
 -   **"Unknown lifecycle event"**: Check valid events with `lisa hooks` (no arguments).

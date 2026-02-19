@@ -28,16 +28,16 @@ The Externalizer skill in particular has no Claude Code equivalent. It addresses
 Copy the LISA directory into your project and install dependencies:
 
 ```bash
-mkdir -p src
-cp -r <lisa-source> src/lisa
-chmod +x src/lisa/lisa.sh
+mkdir -p .agent
+cp -r <lisa-source> .agent/lisa
+chmod +x .agent/lisa/lisa.sh
 pip install tiktoken
 ```
 
 Verify installation:
 
 ```bash
-./src/lisa/lisa.sh version
+./.agent/lisa/lisa.sh version
 ```
 
 For global installation, per-project setup details, and virtual environment guidance, see the [User Guide](docs/user_guide.md#installation).
@@ -49,7 +49,7 @@ For global installation, per-project setup details, and virtual environment guid
 Set up an alias for convenience (add to `.bashrc`/`.zshrc` or project `.envrc`):
 
 ```bash
-alias lisa='./src/lisa/lisa.sh'
+alias lisa='./.agent/lisa/lisa.sh'
 ```
 
 Then run LISA commands:
@@ -108,7 +108,7 @@ Tracks discrete agentic reasoning cycles to detect logic drift before context de
 A reusable epic-level refactoring skill that detects cross-cutting quality issues.
 -   **Invoke:** Run `lisa polish` to load the Polish Pass skill protocol.
 -   **Phases:** Duplicate detection, naming audit, error handling consistency, magic value scan, performance/security review, and project structure verification.
--   **Skill:** Bundled inside the LISA package (`src/lisa/skills/polish-pass/skill.md`)
+-   **Skill:** Bundled inside the LISA package (`.agent/lisa/skills/polish-pass/skill.md`)
 
 ### Lifecycle Hooks
 Automatically invoke LISA skills at key story lifecycle boundaries.
