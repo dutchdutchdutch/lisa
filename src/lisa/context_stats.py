@@ -6,9 +6,9 @@ import time
 
 # Default ignores to prevent scanning massive generated directories
 DEFAULT_IGNORES = [
-    ".git", ".lisa", ".agent", "__pycache__", "node_modules", "venv", ".env", 
+    ".git", ".lisa", ".bmad", "__pycache__", "node_modules", "venv", ".env",
     ".DS_Store", "dist", "build", "coverage", ".pytest_cache",
-    "_bmad", "_bmad-output"
+    "_bmad"
 ]
 
 CACHE_FILE = ".lisa/context_cache.json"

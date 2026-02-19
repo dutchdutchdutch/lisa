@@ -4,9 +4,7 @@ This guide provides detailed instructions on how to use LISA (Layered Isolated S
 
 ## Installation
 
-LISA is designed as a zero-dependency drop-in tool. It installs under `agent/scripts/lisa/` — separate from your project's own scripts and alongside any other agent tools (e.g., `agent/scripts/ralph/`).
-
-> If your project uses `.agent/` as the agent root, substitute `.agent/scripts/lisa/` throughout.
+LISA is designed as a zero-dependency drop-in tool. It installs under `src/lisa/`.
 
 ### Prerequisites
 
@@ -20,9 +18,9 @@ Install LISA into a single project, versioned with the repository so the whole t
 1. **Copy files:**
 
     ```bash
-    mkdir -p agent/scripts
-    cp -r <lisa-source> agent/scripts/lisa
-    chmod +x agent/scripts/lisa/lisa.sh
+    mkdir -p src
+    cp -r <lisa-source> src/lisa
+    chmod +x src/lisa/lisa.sh
     ```
 
 2. **Install dependencies:**
@@ -36,7 +34,7 @@ Install LISA into a single project, versioned with the repository so the whole t
 3. **Set up an alias** (recommended):
 
     ```bash
-    alias lisa='./agent/scripts/lisa/lisa.sh'
+    alias lisa='./src/lisa/lisa.sh'
     ```
 
     Add this to your shell profile (`.bashrc`, `.zshrc`) or a project-level `.envrc`.
@@ -56,15 +54,15 @@ Install LISA once and use it across all projects. Useful for personal workflows 
 1. **Copy files to a global location:**
 
     ```bash
-    mkdir -p ~/agent/scripts
-    cp -r <lisa-source> ~/agent/scripts/lisa
-    chmod +x ~/agent/scripts/lisa/lisa.sh
+    mkdir -p ~/src
+    cp -r <lisa-source> ~/src/lisa
+    chmod +x ~/src/lisa/lisa.sh
     ```
 
 2. **Add to PATH or create a global alias:**
 
     ```bash
-    alias lisa='~/agent/scripts/lisa/lisa.sh'
+    alias lisa='~/src/lisa/lisa.sh'
     ```
 
     Add this to your shell profile (`.bashrc`, `.zshrc`).
@@ -87,25 +85,23 @@ Install LISA once and use it across all projects. Useful for personal workflows 
 
 ```
 project-root/
-├── agent/
-│   └── scripts/
-│       ├── lisa/           # LISA - context governance
-│       │   ├── lisa.sh     # shell entry point
-│       │   ├── __main__.py
-│       │   ├── commands.py
-│       │   ├── ...
-│       │   └── skills/
-│       │       ├── polish-pass/
-│       │       ├── refactor-gate/
-│       │       └── ...
-│       └── ralph/          # sibling agent tool (example)
+├── src/
+│   └── lisa/               # LISA - context governance
+│       ├── lisa.sh         # shell entry point
+│       ├── __main__.py
+│       ├── commands.py
+│       ├── ...
+│       └── skills/
+│           ├── polish-pass/
+│           ├── refactor-gate/
+│           └── ...
 ├── .lisa/                  # runtime state (auto-created)
 │   ├── config.json
 │   └── state.json
 └── ...
 ```
 
-> All examples in this guide assume the `lisa` alias is configured. If not using the alias, substitute `./agent/scripts/lisa/lisa.sh` for `lisa`.
+> All examples in this guide assume the `lisa` alias is configured. If not using the alias, substitute `./src/lisa/lisa.sh` for `lisa`.
 
 ## Configuration
 
@@ -377,5 +373,5 @@ lisa context health
 -   **"Context Limit Exceeded"**: Run `lisa reset` to archive and clear your session.
 -   **"[🔴] Context Red"**: Your workspace is too large. Clean up files or run `lisa reset`.
 -   **"Please fix permissions on .lisa/"**: Check file permissions on the `.lisa/` directory. LISA requires read/write access.
--   **"Polish Pass skill not found"**: Ensure `agent/scripts/lisa/skills/polish-pass/skill.md` exists relative to your project root.
+-   **"Polish Pass skill not found"**: Ensure `src/lisa/skills/polish-pass/skill.md` exists relative to your project root.
 -   **"Unknown lifecycle event"**: Check valid events with `lisa hooks` (no arguments).

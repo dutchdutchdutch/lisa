@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-DEFAULT_IGNORES = [".git", ".lisa", "__pycache__", "node_modules", "venv", ".env", ".agent"]
+DEFAULT_IGNORES = [".git", ".lisa", "__pycache__", "node_modules", "venv", ".env", ".bmad"]
 
 def find_project_root(start_path: str = None) -> str:
     """

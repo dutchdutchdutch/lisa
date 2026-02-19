@@ -64,14 +64,14 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 ### Selected Architecture: Skill + Enforcer Tools
 
 **Definition:**
-*   **The Brain (Skill):** A markdown definition (`.agent/skills/tdd-gate/skill.md`) that instructs the agent on the Red-Green-Refactor loop.
+*   **The Brain (Skill):** A markdown definition (`.bmad/skills/tdd-gate/skill.md`) that instructs the agent on the Red-Green-Refactor loop.
 *   **The Muscle (CLI):** A lightweight Python CLI (`lisa`) providing atomic tools that the Skill *requires* the agent to call (e.g., `lisa verify-fail`).
 
 **Initialization Command:**
 
 ```bash
-mkdir -p .lisa/hooks agent/scripts/lisa agent/scripts/lisa/skills/tdd-gate
-touch .lisa/config.json .agent/skills/tdd-gate/skill.md
+mkdir -p .lisa/hooks src/lisa src/lisa/skills/tdd-gate
+touch .lisa/config.json src/lisa/skills/tdd-gate/skill.md
 # Core logic: Skill Markdown + Python Tools
 ```
 
@@ -117,7 +117,7 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 
 ### Infrastructure & Deployment
 *   **Decision:** Repo-based Distribution (Phase 1).
-*   **Pattern:** Scripts committed to `agent/scripts/lisa`.
+*   **Pattern:** Scripts committed to `src/lisa`.
 *   **Rationale:** "Walking Skeleton" approach. External dependencies (like `pytest`) are permitted where they add significant value over standard library, provided they are documented.
 
 ### Decision Impact Analysis
@@ -182,8 +182,9 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 │   ├── state.json              # Task state (The Brain's Memory)
 │   └── hooks/                  # Git hooks directory (symlinked to from .git/hooks)
 │       └── pre-commit          # The specific hook entry point
-├── scripts/
+├── src/
 │   └── lisa/                   # The Core Logic (Repo Space - Committed)
+│       ├── lisa.sh             # The "Exec" Wrapper & Entry Point
 │       ├── __main__.py         # CLI Entry Point & Dispatch
 │       ├── config.py           # Config Manager Module
 │       ├── state.py            # State Manager Module
@@ -195,19 +196,13 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 │       ├── hooks.py            # Lifecycle Hooks Engine
 │       ├── logger.py           # Centralized Output with Status Icons
 │       ├── utils.py            # Utilities (project root detection)
-│       └── __init__.py         # Package Marker
+│       ├── __init__.py         # Package Marker
+│       └── skills/             # LISA Skill Definitions
+│           ├── tdd-gate/       # Red-Green-Refactor enforcement
+│           ├── refactor-gate/  # Refactor phase regression guard
+│           ├── polish-pass/    # Epic-level refactoring audit
+│           └── ...
 ├── tests/                      # Unit Tests (unittest)
-├── .agent/
-│   ├── skills/                 # LISA Skill Definitions
-│   │   ├── tdd-gate/           # Red-Green-Refactor enforcement
-│   │   ├── refactor-gate/      # Refactor phase regression guard
-│   │   ├── polish-pass/        # Epic-level refactoring audit
-│   │   ├── context-curator/    # Context compression protocol
-│   │   ├── externalizer/       # State externalization
-│   │   ├── session-management/ # Session lifecycle
-│   │   └── token-analysis/     # Token counting strategy
-│   └── test-artifacts/         # Verification Scripts/Artifacts
-├── lisa.sh                     # The "Exec" Wrapper & Entry Point
 └── .git/
     └── hooks/
         └── pre-commit -> ../../.lisa/hooks/pre-commit  # Symlink Integration
@@ -230,13 +225,13 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 ### Requirements to Structure Mapping
 
 **Feature Mapping:**
-*   **Workflow Enforcement (FR1-FR4):** Implemented in `agent/scripts/lisa/commands.py`
-*   **Context Governance (FR5-FR7):** Implemented in `agent/scripts/lisa/context_stats.py` and `agent/scripts/lisa/archiver.py`
+*   **Workflow Enforcement (FR1-FR4):** Implemented in `src/lisa/commands.py`
+*   **Context Governance (FR5-FR7):** Implemented in `src/lisa/context_stats.py` and `src/lisa/archiver.py`
 *   **User Interaction (FR8-FR9):** Implemented in `main.py` (Output Formatting)
 
 **Cross-Cutting Concerns:**
 *   **Observability:** `[LISA]` prefix handling in `main.py`.
-*   **Configuration:** `agent/scripts/lisa/config.py` module.
+*   **Configuration:** `src/lisa/config.py` module.
 
 ## Architecture Validation Results
 
@@ -247,7 +242,7 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 
 ### Requirements Coverage Validation ✅
 *   **Workflow Gates (FR1-FR4):** Covered by `lisa.sh` hook logic.
-*   **Context Governance (FR5-FR7):** Covered by `agent/scripts/lisa/context_stats.py`.
+*   **Context Governance (FR5-FR7):** Covered by `src/lisa/context_stats.py`.
 *   **Traffic Light (FR8):** Covered by `main.py`.
 *   **Zero-Dependency (NFR):** Relaxed in Epic 5 to support `tiktoken`. Now "Low-Dependency".
 
@@ -318,7 +313,7 @@ touch .lisa/config.json .agent/skills/tdd-gate/skill.md
 
 ### Polish Pass Skill Architecture
 *   **Decision:** Reusable, project-agnostic skill artifact.
-*   **Pattern:** `.agent/skills/polish-pass/skill.md` defines a multi-phase audit protocol. `lisa polish` CLI command reads and outputs the skill for agent consumption.
+*   **Pattern:** `.bmad/skills/polish-pass/skill.md` defines a multi-phase audit protocol. `lisa polish` CLI command reads and outputs the skill for agent consumption.
 *   **Phases:** Duplicate detection → Naming audit → Error handling consistency → Magic value scan → Performance/security review → Project structure verification → Regression suite.
 *   **Design Principle:** The skill reads the project's own architecture doc to discover conventions dynamically — no hardcoded project references.
 

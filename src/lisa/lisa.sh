@@ -26,8 +26,8 @@ fi
 # Get the absolute path of the directory containing this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# SCRIPT_DIR is agent/scripts/lisa/; parent (agent/scripts/) goes on PYTHONPATH
-# so "python3 -m lisa" resolves agent/scripts/lisa/ as the lisa package.
+# SCRIPT_DIR is src/lisa/; parent (src/) goes on PYTHONPATH
+# so "python3 -m lisa" resolves src/lisa/ as the lisa package.
 export PYTHONPATH="$SCRIPT_DIR/..:$PYTHONPATH"
 
 # Exec Handover: Replace current process with Python interpreter

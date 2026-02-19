@@ -8,36 +8,16 @@ __pycache__/
 .DS_Store
 
 # === LISA runtime state (regenerated) ===
-.lisa/state.json
-.lisa/state.json.lock
-.lisa/state.json.tmp
-.lisa/state.json.temp
-.lisa/lisa_state.json
-.lisa/lisa_state.json.lock
-.lisa/lisa_state.json.tmp
-.lisa/lisa_state.json.temp
-.lisa/lisa_data.json
-.lisa/lisa_data.json.lock
-.lisa/lisa_data.json.tmp
-.lisa/lisa_data.json.temp
-.lisa/lisa_storage.json
-.lisa/lisa_storage.json.lock
-.lisa/lisa_storage.json.tmp
-.lisa/lisa_storage.json.temp
-.lisa/context_cache.json
-.lisa/archive/
+.lisa/
+.lisa.bak/
 
-# === Build framework & dev tooling ===
-.agent/
-_bmad-output/
+# === Build framework & dev tooling (bmad) ===
+.bmad/
+_bmad/
 
 # === Planning & review artifacts ===
 code_review*.md
 todo.md
 
-# === Misc dev artifacts ===
-src/
-temp_subdir/
+# === Test fixtures ===
 tests/manual_fail.py
-agent/scripts/lisa/.lisa/
-_bmad/
