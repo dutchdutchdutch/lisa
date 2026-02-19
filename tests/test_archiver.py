@@ -71,11 +71,12 @@ class TestSessionArchival(unittest.TestCase):
     def test_reset_session_clears_state(self):
         """Test that reset_session clears state to defaults."""
         reset_session(os.getcwd())
-        
-        with open(self.state_file, 'r') as f:
-            new_state = json.load(f)
-            
-        # Should adhere to StateManager defaults
+
+        # Read from the actual StateManager storage file (lisa_storage.json)
+        manager = StateManager(project_root=os.getcwd())
+        new_state = manager.load()
+
+        # Should adhere to reset defaults
         self.assertEqual(new_state.get("mode"), "NORMAL")
         self.assertEqual(new_state.get("status"), "IDLE")
 

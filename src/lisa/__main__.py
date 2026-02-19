@@ -21,7 +21,7 @@ def main():
 
     # Commands that work without a project root (smoke test)
     if command == "version":
-        print("0.2.2")
+        print("0.3.0")
         sys.exit(0)
 
     # Auto-increment turn counter once per response cycle (Story 5.9)

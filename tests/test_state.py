@@ -2,7 +2,6 @@ import unittest
 import os
 import shutil
 import tempfile
-import json
 from unittest.mock import patch
 from lisa.state import StateManager
 
@@ -30,10 +29,9 @@ class TestStateManager(unittest.TestCase):
         new_count = manager.increment_turn()
         self.assertEqual(new_count, 1)
 
-        # Verify persistence
-        with open(os.path.join(self.test_dir, ".lisa/state.json"), "r") as f:
-            data = json.load(f)
-            self.assertEqual(data["turn_count"], 1)
+        # Verify persistence via StateManager (not hardcoded path)
+        state = manager.load()
+        self.assertEqual(state["turn_count"], 1)
 
     def test_reset_turn(self):
         """Should reset turn_count to 0."""
@@ -58,11 +56,11 @@ class TestStatePersistenceFallback(unittest.TestCase):
         shutil.rmtree(self.test_dir)
 
     def test_primary_path_used_when_writable(self):
-        """Criteria 1: Uses .lisa/state.json when writable."""
+        """Criteria 1: Uses .lisa/lisa_storage.json when writable."""
         os.makedirs(os.path.join(self.test_dir, ".lisa"), exist_ok=True)
         manager = StateManager(project_root=self.test_dir)
 
-        expected = os.path.join(self.test_dir, ".lisa", "state.json")
+        expected = os.path.join(self.test_dir, ".lisa", "lisa_storage.json")
         self.assertEqual(manager.state_file, expected)
         self.assertFalse(manager.using_fallback)
 
@@ -209,7 +207,7 @@ class TestStateRepair(unittest.TestCase):
         success, message = manager.repair()
         self.assertTrue(success)
         self.assertFalse(manager.using_fallback)
-        self.assertIn(".lisa/state.json", manager.state_file)
+        self.assertIn(".lisa/lisa_storage.json", manager.state_file)
 
     def test_repair_migrates_state_from_fallback(self):
         """repair() migrates existing state from fallback to primary."""

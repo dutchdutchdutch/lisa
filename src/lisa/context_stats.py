@@ -157,49 +157,49 @@ def get_cache_status(limit, interval=None):
         pass
     return {}
 
+def get_turn_health(turn_count, turn_warning_threshold=12, turn_limit=20):
+    """
+    Returns the health status based on turn count.
+    GREEN: turn_count < turn_warning_threshold
+    AMBER: turn_count >= turn_warning_threshold
+    RED: turn_count > turn_limit
+    """
+    if turn_count > turn_limit:
+        return "RED"
+    elif turn_count >= turn_warning_threshold:
+        return "AMBER"
+    else:
+        return "GREEN"
+
+
 def get_cached_health_icon():
     """
-    Lazy fetch of icon. Checks TTL. If expired, re-scans.
+    Returns the traffic light icon based on turn count (context pressure proxy).
+    Reads turn count from state.json — a single int read, no filesystem scan.
     """
     from .config import ConfigManager
+    from .state import StateManager
     from .utils import find_project_root
-    
-    # Load config once
+
     try:
         root = find_project_root(os.getcwd())
         config = ConfigManager(project_root=root).load()
-    except:
+    except Exception:
         config = ConfigManager().load()
-    
-    limit = config.get("context_limit", 20000)
-    interval = config.get("context_check_interval", 600)
-    
-    # Check Cache
-    cache = get_cache_status(limit)
-    last_update = cache.get("timestamp", 0)
-    current_time = time.time()
-    
-    # Check TTL
-    if (current_time - last_update) < interval and "health" in cache:
-        health = cache["health"]
-    else:
-        # Expired or missing -> Re-scan
-        try:
-             # Logic duplication meant we were resolving root/config twice.
-             # Now we use the resolved root/config from above.
-             # Wait, root might be missing if get_context_health is called from weird place?
-             # But find_project_root logic is robust.
-            if 'root' not in locals():
-                 root = find_project_root(os.getcwd()) # Fallback
+        root = None
 
-            ignores = build_ignores(config)
-            token_count, _ = scan_workspace(root, ignores=ignores)
-            health = get_context_health(token_count, limit)
-            update_cache(token_count, health)
-        except Exception:
-            return "⚪"
+    turn_warning = config.get("turn_warning_threshold", 12)
+    turn_limit = config.get("turn_limit", 20)
 
-    # Map to Icon
+    try:
+        state_manager = StateManager(project_root=root)
+        state = state_manager.load()
+        turn_count = state.get("turn_count", 0)
+    except Exception:
+        return "⚪"
+
+    health = get_turn_health(turn_count, turn_warning, turn_limit)
+
     if health == "GREEN": return "🟢"
     if health == "AMBER": return "🟡"
     if health == "RED": return "🔴"

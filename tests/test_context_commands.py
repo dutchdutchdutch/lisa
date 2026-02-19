@@ -48,37 +48,37 @@ class TestContextCommands(unittest.TestCase):
     @patch('lisa.commands.scan_workspace')
     @patch('lisa.commands.find_project_root')
     def test_context_health(self, mock_find_root, mock_scan, MockConfig):
-        """Should verify context health report."""
+        """Should verify context health report leads with turn-based health."""
         mock_find_root.return_value = self.test_dir
         mock_scan.return_value = (128000, 20) # 80% saturation
 
         # Mock Config
-        mock_config = {"context_limit": 160000}
+        mock_config = {"context_limit": 160000, "turn_warning_threshold": 12, "turn_limit": 20}
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
 
         with patch('lisa.commands.print_with_status') as mock_print:
-            # We mock DriftDetector implicitly via the module import inside the function
-            # But simpler here is to let it run since it's deterministic
             ret_code = context_health([])
             self.assertEqual(ret_code, 0)
-            # 128000 / 160000 = 80% -> WARNING (Saturation)
-            # Saturation: 80% (128000 / 160000 tokens)
+            # AC3: Turn-based health appears first (primary signal)
+            mock_print.assert_any_call("Context Pressure (Turns)", status_icon="🟢")
+            # AC3: Workspace size appears second (supplementary)
+            mock_print.assert_any_call("Workspace Size (Files on Disk)", status_icon="📂")
+            # Workspace saturation still present
             mock_print.assert_any_call("Saturation:      80% (128000 / 160000 tokens)", status_icon="📈")
-            mock_print.assert_any_call("Status:          WARNING (Saturation)", status_icon="rx")
 
     @patch('lisa.commands.get_cache_status')
     @patch('lisa.commands.ConfigManager')
     @patch('lisa.commands.scan_workspace')
     @patch('lisa.commands.find_project_root')
     def test_check_context_output(self, mock_find_root, mock_scan, MockConfig, mock_cache_status):
-        """Should verify check_context output includes disclaimer."""
-        from lisa.commands import check_context  # Import here to avoid early import issues 
-        
+        """Should verify check_context leads with turns and includes disclaimer."""
+        from lisa.commands import check_context  # Import here to avoid early import issues
+
         mock_find_root.return_value = self.test_dir
         mock_scan.return_value = (5000, 50)
-        
-        mock_config = {"context_limit": 160000}
+
+        mock_config = {"context_limit": 160000, "turn_warning_threshold": 12, "turn_limit": 20}
         MockConfig.return_value.load.return_value = mock_config
         MockConfig.return_value.get.side_effect = mock_config.get
 
@@ -89,7 +89,11 @@ class TestContextCommands(unittest.TestCase):
             with patch('lisa.commands.print_with_status') as mock_status:
                 ret_code = check_context([])
                 self.assertEqual(ret_code, 0)
-                
+
+                # AC: Turn-based health appears first
+                mock_status.assert_any_call("Context Pressure (Turns)")
+                # AC: Workspace size appears second
+                mock_status.assert_any_call("Workspace Size (On-Disk)")
                 # Check for disclaimer in standard print
                 mock_print.assert_any_call("    Approximation method across models for watchdog purposes. Not billing grade accurate.")
 

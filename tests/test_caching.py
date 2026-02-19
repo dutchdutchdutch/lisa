@@ -2,7 +2,6 @@
 import unittest
 import os
 import json
-import time
 import shutil
 import tempfile
 from unittest.mock import patch, MagicMock
@@ -48,67 +47,53 @@ class TestContextCaching(unittest.TestCase):
         self.assertIn("timestamp", data)
         self.assertIsInstance(data["timestamp"], float)
 
-    @patch('lisa.context_stats.scan_workspace')
     @patch('lisa.config.ConfigManager.load')
-    def test_get_cached_health_icon_hit(self, mock_config_load, mock_scan):
-        """Test that get_cached_health_icon returns cached value if valid."""
-        # Setup config
-        mock_config_load.return_value = {"context_limit": 10000, "context_check_interval": 600}
-        
-        # Setup cache
-        params = {
-            "token_count": 500,
-            "health": "GREEN",
-            "timestamp": time.time() # Fresh cache
+    def test_get_cached_health_icon_green_turns(self, mock_config_load):
+        """Test that get_cached_health_icon returns green when turn count is low."""
+        mock_config_load.return_value = {
+            "turn_warning_threshold": 12, "turn_limit": 20
         }
-        with open(CACHE_FILE, 'w') as f:
-            json.dump(params, f)
-            
-        icon = get_cached_health_icon()
-        
-        self.assertEqual(icon, "🟢")
-        mock_scan.assert_not_called()
 
-    @patch('lisa.context_stats.scan_workspace')
+        # Write state with low turn count
+        state_path = os.path.join(self.test_dir, ".lisa", "lisa_storage.json")
+        with open(state_path, "w") as f:
+            json.dump({"turn_count": 3}, f)
+
+        icon = get_cached_health_icon()
+        self.assertEqual(icon, "🟢")
+
     @patch('lisa.config.ConfigManager.load')
-    def test_get_cached_health_icon_miss_expired(self, mock_config_load, mock_scan):
-        """Test that get_cached_health_icon re-scans if cache is expired."""
-        # Setup config
-        mock_config_load.return_value = {"context_limit": 10000, "context_check_interval": 600}
-        
-        # Setup EXPIRED cache (older than 600s)
-        params = {
-            "token_count": 500,
-            "health": "GREEN",
-            "timestamp": time.time() - 700 
+    def test_get_cached_health_icon_amber_turns(self, mock_config_load):
+        """Test that get_cached_health_icon returns amber at warning threshold."""
+        mock_config_load.return_value = {
+            "turn_warning_threshold": 12, "turn_limit": 20
         }
-        os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
-        with open(CACHE_FILE, 'w') as f:
-            json.dump(params, f)
-            
-        # Mock scan result to return high usage (RED)
-        mock_scan.return_value = (9500, 50) 
-        
-        icon = get_cached_health_icon()
-        
-        self.assertEqual(icon, "🔴") # Should be RED now
-        mock_scan.assert_called_once()
-        
-        # Verify cache was updated
-        with open(CACHE_FILE, 'r') as f:
-            data = json.load(f)
-        self.assertEqual(data["health"], "RED")
-        self.assertGreater(data["timestamp"], params["timestamp"])
 
-    @patch('lisa.context_stats.scan_workspace')
-    def test_get_cached_health_icon_no_cache(self, mock_scan):
-        """Test behavior when no cache exists."""
-        mock_scan.return_value = (100, 5)
-        
+        state_path = os.path.join(self.test_dir, ".lisa", "lisa_storage.json")
+        with open(state_path, "w") as f:
+            json.dump({"turn_count": 14}, f)
+
         icon = get_cached_health_icon()
-        
+        self.assertEqual(icon, "🟡")
+
+    @patch('lisa.config.ConfigManager.load')
+    def test_get_cached_health_icon_red_turns(self, mock_config_load):
+        """Test that get_cached_health_icon returns red when turns exceed limit."""
+        mock_config_load.return_value = {
+            "turn_warning_threshold": 12, "turn_limit": 20
+        }
+
+        state_path = os.path.join(self.test_dir, ".lisa", "lisa_storage.json")
+        with open(state_path, "w") as f:
+            json.dump({"turn_count": 25}, f)
+
+        icon = get_cached_health_icon()
+        self.assertEqual(icon, "🔴")
+
+    def test_get_cached_health_icon_no_state(self):
+        """Test that get_cached_health_icon returns green when no state exists (turn 0)."""
+        icon = get_cached_health_icon()
         self.assertEqual(icon, "🟢")
-        mock_scan.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()

@@ -24,7 +24,7 @@ class TestContextHealthOutputContract(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp()
         os.makedirs(os.path.join(self.test_dir, ".lisa"), exist_ok=True)
         # Write a state file with a known turn count
-        state_path = os.path.join(self.test_dir, ".lisa", "state.json")
+        state_path = os.path.join(self.test_dir, ".lisa", "lisa_storage.json")
         with open(state_path, "w") as f:
             json.dump({"turn_count": 5}, f)
 
@@ -35,7 +35,7 @@ class TestContextHealthOutputContract(unittest.TestCase):
     @patch('lisa.commands.scan_workspace')
     @patch('lisa.commands.find_project_root')
     def test_health_report_includes_all_fields(self, mock_root, mock_scan, MockConfig):
-        """context_health output must include: Saturation, Signal Ratio, Status, Turn Count."""
+        """context_health output must include: turn-based health (primary) and workspace size (secondary)."""
         mock_root.return_value = self.test_dir
         mock_scan.return_value = (10000, 20)
 
@@ -53,10 +53,11 @@ class TestContextHealthOutputContract(unittest.TestCase):
 
         required_fields = [
             "Context Health Report",
+            "Context Pressure (Turns)",
+            "Turn Count:",
+            "Workspace Size (Files on Disk)",
             "Saturation:",
             "Signal Ratio:",
-            "Status:",
-            "Turn Count:",
         ]
         for field in required_fields:
             self.assertIn(field, all_output, f"Missing required field: '{field}'")
@@ -86,7 +87,7 @@ class TestContextHealthOutputContract(unittest.TestCase):
     def test_health_turn_count_color_amber(self, mock_root, mock_scan, MockConfig):
         """Turn count at warning threshold should use amber icon."""
         # Write state with turn count at threshold
-        state_path = os.path.join(self.test_dir, ".lisa", "state.json")
+        state_path = os.path.join(self.test_dir, ".lisa", "lisa_storage.json")
         with open(state_path, "w") as f:
             json.dump({"turn_count": 12}, f)
 
@@ -107,7 +108,7 @@ class TestContextHealthOutputContract(unittest.TestCase):
     @patch('lisa.commands.find_project_root')
     def test_health_turn_count_color_red(self, mock_root, mock_scan, MockConfig):
         """Turn count above turn limit should use red icon."""
-        state_path = os.path.join(self.test_dir, ".lisa", "state.json")
+        state_path = os.path.join(self.test_dir, ".lisa", "lisa_storage.json")
         with open(state_path, "w") as f:
             json.dump({"turn_count": 25}, f)
 
@@ -130,7 +131,7 @@ class TestContextSizeOutputContract(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
         os.makedirs(os.path.join(self.test_dir, ".lisa"), exist_ok=True)
-        state_path = os.path.join(self.test_dir, ".lisa", "state.json")
+        state_path = os.path.join(self.test_dir, ".lisa", "lisa_storage.json")
         with open(state_path, "w") as f:
             json.dump({"turn_count": 3}, f)
 

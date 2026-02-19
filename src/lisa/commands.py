@@ -5,7 +5,7 @@ from .runner import run_test
 from .archiver import archive_session, reset_session
 from .analysis import find_importers
 from .utils import find_project_root
-from .context_stats import scan_workspace, get_context_health, update_cache, get_cached_health_icon, get_cache_status, build_ignores
+from .context_stats import scan_workspace, get_context_health, update_cache, get_cached_health_icon, get_cache_status, build_ignores, get_turn_health
 from .config import ConfigManager
 from .logger import print_with_status
 from .state import StateManager, LISA_MODES, ContextActivity
@@ -312,35 +312,68 @@ def turns(args):
 
 def check_context(args):
     """
-    Checks the estimated token count of the workspace and turn count.
+    Checks context health: turn-based pressure (primary) and workspace size (supplementary).
     Usage: lisa context [force]
     """
-    print_with_status("Context Analysis (The Scale)")
+    print_with_status("Context Analysis")
     print("-----------------------------------")
-    
+
     force = "force" in args
-    
+
     try:
         project_root = find_project_root(os.getcwd())
     except FileNotFoundError:
         print_with_status("Error: Could not determine project root.", status_icon="🔴")
         return 1
-        
+
     config = ConfigManager(project_root=project_root).load()
+
+    # --- Primary: Context Pressure (Turns) ---
+    state_manager = StateManager(project_root=project_root)
+    state_manager.warn_if_fallback()
+    state = state_manager.load()
+    turn_count = state.get("turn_count", 0)
+
+    turn_warning = config.get("turn_warning_threshold", 12)
+    turn_limit_val = config.get("turn_limit", 20)
+
+    turn_health = get_turn_health(turn_count, turn_warning, turn_limit_val)
+
+    turn_icon = "🟢"
+    if turn_health == "RED":
+        turn_icon = "🔴"
+    elif turn_health == "AMBER":
+        turn_icon = "🟡"
+
+    print_with_status("Context Pressure (Turns)")
+    print("-----------------------------------")
+    print_with_status(f"Current Turn: {turn_count}", status_icon=turn_icon)
+    print_with_status(f"Status: {turn_health}", status_icon=turn_icon)
+
+    if turn_health == "RED":
+         print_with_status(f"CRITICAL: Turn Limit Exceeded (>{turn_limit_val}).", status_icon="🔴")
+         print_with_status("    Action Required: Perform 'Context Purge' (Compact & Reset).", status_icon="🔴")
+    elif turn_health == "AMBER":
+         print_with_status(f"WARNING: Approaching Turn Limit ({turn_warning}-{turn_limit_val}).", status_icon="🟡")
+         print_with_status("    Action Recommended: Check for drift. Consider wrapping up story.", status_icon="🟡")
+
+    # --- Supplementary: Workspace Size (On-Disk) ---
+    print("")
+    print_with_status("Workspace Size (On-Disk)")
+    print("-----------------------------------")
+
     limit = config.get("context_limit", 20000)
     interval = config.get("context_check_interval", 600)
-    
-    # Check Cache first (Medium Issue 1 Fix)
+
     cache = get_cache_status(limit)
     last_update = cache.get("timestamp", 0)
     current_time = time.time()
     is_fresh = (current_time - last_update) < interval
-    
+
     if is_fresh and not force and "token_count" in cache:
         token_count = cache["token_count"]
         print_with_status(f"Scanning workspace: {project_root} (Cached)", status_icon="ℹ️")
-        # We skip the scan
-        file_count = "N/A (Cached)" 
+        file_count = "N/A (Cached)"
     else:
         print_with_status(f"Scanning workspace: {project_root}")
         ignores = build_ignores(config)
@@ -348,68 +381,28 @@ def check_context(args):
         health = get_context_health(token_count, limit)
         update_cache(token_count, health)
 
-    # Re-calculate health from token_count (whether cached or new)
     health = get_context_health(token_count, limit)
-    
-    # Determine icon for Tokens
+
     token_icon = "🟢"
     if health == "AMBER":
         token_icon = "🟡"
     elif health == "RED":
         token_icon = "🔴"
-        
+
     percentage = (token_count / limit) * 100
-    
+
     print_with_status(f"Estimated Tokens: {token_count} / {limit}", status_icon=token_icon)
     print("    Approximation method across models for watchdog purposes. Not billing grade accurate.")
     print_with_status(f"Usage: {percentage:.1f}%", status_icon=token_icon)
     print_with_status(f"Status: {health}", status_icon=token_icon)
-    
-    # Turn Analysis (Story 5.3)
-    print("")
-    print_with_status("Turn Analysis (The Clock)")
-    print("-----------------------------------")
-    
-    state_manager = StateManager(project_root=project_root)
-    state_manager.warn_if_fallback()
-    state = state_manager.load()
-    turn_count = state.get("turn_count", 0)
 
-    # Defaults from Story 5.3, but configurable
-    turn_warning = config.get("turn_warning_threshold", 12)
-    turn_limit = config.get("turn_limit", 20)
-    
-    # Logic: Green < warning, Amber warning-limit, Red > limit
-    turn_icon = "🟢"
-    turn_status = "GREEN"
-    
-    if turn_count > turn_limit:
-        turn_icon = "🔴"
-        turn_status = "RED"
-    elif turn_count >= turn_warning:
-        turn_icon = "🟡"
-        turn_status = "AMBER"
-        
-    print_with_status(f"Current Turn: {turn_count}", status_icon=turn_icon)
-    print_with_status(f"Status: {turn_status}", status_icon=turn_icon)
-    
-    if turn_status == "RED":
-         print_with_status(f"CRITICAL: Turn Limit Exceeded (>{turn_limit}).", status_icon="🔴")
-         print_with_status("    Action Required: Perform 'Context Purge' (Compact & Reset).", status_icon="🔴")
-    elif turn_status == "AMBER":
-         print_with_status(f"WARNING: Approaching Turn Limit ({turn_warning}-{turn_limit}).", status_icon="🟡")
-         print_with_status("    Action Recommended: Check for drift. Consider wrapping up story.", status_icon="🟡")
-    
-    # Token Warnings (After Turn Analysis so both are visible)
     if health == "RED":
-         print_with_status("CRITICAL: Context Limit Exceeded.", status_icon="🔴")
+         print_with_status("CRITICAL: Workspace token budget exceeded.", status_icon="🔴")
          print_with_status("    Action Required: Run 'lisa reset' or compact files.", status_icon="🔴")
     elif health == "AMBER":
-         print_with_status("WARNING: Approaching Context Limit.", status_icon="🟡")
-         print_with_status("    Action Recommended: Perform Context Curation (Summarize History).", status_icon="🟡")
-         if turn_status == "GREEN": # Only return 2 if token warning is primary, else maybe higher?
-             return 2 
-         
+         print_with_status("WARNING: Approaching workspace token budget.", status_icon="🟡")
+         print_with_status("    Action Recommended: Review scan_ignores or increase context_limit.", status_icon="🟡")
+
     return 0
 
 def reset_context(args):
@@ -660,7 +653,7 @@ def context_size(args):
 
 def context_health(args):
     """
-    Reports qualitative context health and drift metrics.
+    Reports context health: turn-based pressure (primary) and workspace size (secondary).
     Usage: lisa context health
     """
     try:
@@ -670,48 +663,53 @@ def context_health(args):
         return 1
 
     config = ConfigManager(project_root=project_root).load()
-    limit = config.get("context_limit", 20000)
 
-    ignores = build_ignores(config)
-    token_count, _ = scan_workspace(project_root, ignores=ignores)
-
-    from .drift_detection import DriftDetector
-    detector = DriftDetector(token_count, limit)
-    report = detector.check_health()
-    
+    # --- Primary: Context Pressure (Turns) ---
     print_with_status("Context Health Report")
     print("---------------------")
-    
-    # Format Saturation
-    sat_pct = int(report.saturation * 100)
-    print_with_status(f"Saturation:      {sat_pct}% ({token_count} / {limit} tokens)", status_icon="📈")
-    print_with_status(f"Signal Ratio:    {report.signal_ratio}", status_icon="📡")
-    # Drift Metric deferred to tech debt
-    print_with_status(f"Status:          {report.status}", status_icon="rx") # rx maps to a health icon usually, or just use text
-    
-    # Turn count (Story 5.3 integration)
+
     state_manager = StateManager(project_root=project_root)
     state_manager.warn_if_fallback()
     state = state_manager.load()
     turn_count = state.get("turn_count", 0)
 
     turn_warning = config.get("turn_warning_threshold", 12)
-    turn_limit = config.get("turn_limit", 20)
+    turn_limit_val = config.get("turn_limit", 20)
+
+    turn_health = get_turn_health(turn_count, turn_warning, turn_limit_val)
 
     turn_icon = "🟢"
-    if turn_count > turn_limit:
+    if turn_health == "RED":
         turn_icon = "🔴"
-    elif turn_count >= turn_warning:
+    elif turn_health == "AMBER":
         turn_icon = "🟡"
 
+    print_with_status("Context Pressure (Turns)", status_icon=turn_icon)
     print_with_status(f"Turn Count:      {turn_count}", status_icon=turn_icon)
+    print_with_status(f"Status:          {turn_health}", status_icon=turn_icon)
 
-    if turn_count > turn_limit:
-        print_with_status(f"CRITICAL: Turn Limit Exceeded (>{turn_limit}).", status_icon="🔴")
+    if turn_health == "RED":
+        print_with_status(f"CRITICAL: Turn Limit Exceeded (>{turn_limit_val}).", status_icon="🔴")
         print_with_status("    Action Required: Perform 'Context Purge' (Compact & Reset).", status_icon="🔴")
-    elif turn_count >= turn_warning:
-        print_with_status(f"WARNING: Approaching Turn Limit ({turn_warning}-{turn_limit}).", status_icon="🟡")
+    elif turn_health == "AMBER":
+        print_with_status(f"WARNING: Approaching Turn Limit ({turn_warning}-{turn_limit_val}).", status_icon="🟡")
         print_with_status("    Action Recommended: Check for drift. Consider wrapping up story.", status_icon="🟡")
+
+    # --- Secondary: Workspace Size (Files on Disk) ---
+    print("")
+    limit = config.get("context_limit", 20000)
+    ignores = build_ignores(config)
+    token_count, _ = scan_workspace(project_root, ignores=ignores)
+
+    from .drift_detection import DriftDetector
+    detector = DriftDetector(token_count, limit)
+    report = detector.check_health()
+
+    sat_pct = int(report.saturation * 100)
+    print_with_status("Workspace Size (Files on Disk)", status_icon="📂")
+    print_with_status(f"Saturation:      {sat_pct}% ({token_count} / {limit} tokens)", status_icon="📈")
+    print_with_status(f"Signal Ratio:    {report.signal_ratio}", status_icon="📡")
+    print_with_status(f"Status:          {report.status}", status_icon="rx")
 
     return 0
 

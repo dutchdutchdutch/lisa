@@ -1,6 +1,6 @@
 ---
 name: curating-context
-description: Maintains context hygiene by summarizing and compacting conversation history when token usage thresholds are breached. Use when context usage exceeds 70%, the user requests a summary or compaction, or the conversation becomes unwieldy.
+description: Maintains context hygiene by summarizing and compacting conversation history when turn-based health signals indicate context pressure. Use when the traffic light turns AMBER (turn 12+) or RED (turn 20+), the user requests a summary or compaction, or the conversation becomes unwieldy.
 ---
 
 # Context Curator Skill
@@ -9,7 +9,7 @@ description: Maintains context hygiene by summarizing and compacting conversatio
 
 ## Trigger
 Activate this skill when:
-1.  `lisa context` reports usage > **70%** (AMBER state).
+1.  `lisa context` reports turn-based health as **AMBER** (turn count >= warning threshold, default 12) or **RED** (turn count > limit, default 20).
 2.  The User explicitly requests a "summary" or "compaction".
 3.  You observe that the conversation history is becoming unwieldy or repetitive.
 
