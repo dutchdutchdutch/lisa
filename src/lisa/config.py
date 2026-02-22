@@ -12,6 +12,8 @@ class ConfigManager:
         "external_state_file": "todo.md",
         "external_state_ttl": 600,
         "scan_ignores": [],
+        "skill_base_path": ".lisa/skills",
+        "installation_type": "drop-in",
         "hooks_mode": "auto",
         "lifecycle_hooks": {
             "story-kickoff": [],
@@ -49,12 +51,28 @@ class ConfigManager:
             self.project_config_path = project_config_path
         else:
             if project_root:
-                self.project_config_path = os.path.join(project_root, ".lisa", "config.json")
+                # Prioritize yaml for Epic 9
+                yaml_path = os.path.join(project_root, ".lisa", "config.yaml")
+                json_path = os.path.join(project_root, ".lisa", "config.json")
+                self.project_config_path = yaml_path if os.path.exists(yaml_path) else json_path
             else:
-                 # Fallback for backward compatibility / tests without root
-                self.project_config_path = os.path.abspath("./.lisa/config.json")
+                # Fallback for backward compatibility / tests without root
+                self.project_config_path = os.path.abspath("./.lisa/config.yaml") if os.path.exists("./.lisa/config.yaml") else os.path.abspath("./.lisa/config.json")
                 
         self._config = self.load()
+
+    def _load_yaml_safe(self, path):
+        """Loads YAML from a file, returns empty dict on failure."""
+        if not os.path.exists(path):
+            return {}
+        try:
+            import yaml
+            with open(path, "r") as f:
+                return yaml.safe_load(f) or {}
+        except (ImportError, Exception) as e:
+            # If PyYAML is missing, we can't load YAML. 
+            # In a real environment we'd handle this better, but for MVP we assume presence if setup runs.
+            return {}
 
     def _load_json_safe(self, path):
         """Loads JSON from a file, returns empty dict on failure."""
@@ -73,11 +91,19 @@ class ConfigManager:
         config = self._DEFAULTS.copy()
         
         # Load User Config
-        user_config = self._load_json_safe(self.user_config_path)
+        user_config = {}
+        if self.user_config_path.endswith((".yaml", ".yml")):
+            user_config = self._load_yaml_safe(self.user_config_path)
+        else:
+            user_config = self._load_json_safe(self.user_config_path)
         config.update(user_config)
         
         # Load Project Config
-        project_config = self._load_json_safe(self.project_config_path)
+        project_config = {}
+        if self.project_config_path.endswith((".yaml", ".yml")):
+            project_config = self._load_yaml_safe(self.project_config_path)
+        else:
+            project_config = self._load_json_safe(self.project_config_path)
         config.update(project_config)
         
         return config

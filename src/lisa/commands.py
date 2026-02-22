@@ -11,6 +11,7 @@ from .logger import print_with_status
 from .state import StateManager, LISA_MODES, ContextActivity
 from .hooks import LIFECYCLE_EVENTS, run_hooks, run_story_complete
 from .classifier import classify_file, classify_all, persist_layers, LAYER_UNIT, LAYER_INTEGRATION
+import shutil
 # Skills are bundled inside the package directory
 _SKILL_BASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skills")
 
@@ -22,6 +23,34 @@ from .scope import (
     record_deferred_failures, get_deferred_failures, record_ui_handoff, LAYER_ORDER,
     STATUS_CLEAN, STATUS_FAILING, STATUS_NOT_RUN,
 )
+
+def resolve_skill_path(project_root, skill_filename, internal_skill_rel_path):
+    """
+    Resolves skill path based on config, with {project-root} support and internal fallback.
+    """
+    try:
+        config = ConfigManager(project_root=project_root).load()
+        skill_path_config = config.get("skill_base_path", ".lisa/skills")
+        
+        # Replace {project-root} placeholder
+        if project_root and "{project-root}" in skill_path_config:
+            skill_path_config = skill_path_config.replace("{project-root}", project_root)
+        
+        # Resolve path
+        if project_root and not os.path.isabs(skill_path_config):
+            local_skill_base = os.path.join(project_root, skill_path_config)
+        else:
+            local_skill_base = skill_path_config
+            
+        skill_path = os.path.join(local_skill_base, skill_filename)
+        
+        if os.path.exists(skill_path):
+            return skill_path
+    except Exception:
+        pass
+
+    # Fallback to internal
+    return os.path.join(_SKILL_BASE, internal_skill_rel_path)
 
 def check_mode_bypass(project_root=None):
     """Checks if current mode allows bypassing verification."""
@@ -487,17 +516,26 @@ def init_session(args):
     """
     Prints the content of the external state file to stdout for context injection.
     With --fix: diagnoses and repairs state persistence issues.
-    Usage: lisa init [--fix]
+    Usage: lisa init [--fix] [--setup]
     """
+    project_root = None
     try:
         project_root = find_project_root(os.getcwd())
     except FileNotFoundError:
-        print_with_status("Error: Could not determine project root.", status_icon="🔴")
-        return 1
+        # If we're doing --setup, we can fallback to os.getcwd()
+        if "--setup" in args or "setup" in args:
+            project_root = os.getcwd()
+        else:
+            print_with_status("Error: Could not determine project root. Run 'lisa init --setup' to initialize.", status_icon="🔴")
+            return 1
 
     # Handle --fix flag (Criteria 3: Self-Healing via Init)
-    if "--fix" in args:
+    if "--fix" in args or "fix" in args:
         return _init_fix(project_root)
+
+    # Handle --setup flag (Story 9.1: Universal Installer)
+    if "--setup" in args or "setup" in args:
+        return _init_setup(project_root)
 
     try:
         # Load Config
@@ -527,6 +565,109 @@ def init_session(args):
     except Exception as e:
         print_with_status(f"Error: {e}", status_icon="🔴")
         return 1
+
+
+def _install_git_hook(hooks_dir, hook_name, command):
+    """Install or update a git hook with a LISA handover command."""
+    hook_path = os.path.join(hooks_dir, hook_name)
+    handover = f"\n# LISA Handover: {hook_name}\n{command}\n"
+    
+    try:
+        if os.path.exists(hook_path):
+            with open(hook_path, "r") as f:
+                content = f.read()
+            if command not in content:
+                # Ensure the file ends with a newline before appending
+                prefix = "" if content.endswith("\n") else "\n"
+                with open(hook_path, "a") as f:
+                    f.write(prefix + handover)
+                print_with_status(f"Updated git hook: {hook_name}", status_icon="🪝")
+        else:
+            with open(hook_path, "w") as f:
+                f.write("#!/bin/bash\n" + handover)
+            os.chmod(hook_path, 0o755)
+            print_with_status(f"Created git hook: {hook_name}", status_icon="🪝")
+    except Exception as e:
+        print_with_status(f"[WARNING] Could not install git hook {hook_name}: {e}", status_icon="⚠️")
+
+def _init_setup(project_root):
+    """Standardized Repository Bootstrapping (Universal Installer)."""
+    print_with_status("LISA Universal Installer (Story 9.1)", status_icon="🚀")
+    print("---------------------------------------------------")
+
+    # 1. Create directory structure
+    dirs = [".lisa", ".lisa/skills", ".lisa/archive"]
+    for d in dirs:
+        path = os.path.join(project_root, d)
+        if not os.path.exists(path):
+            os.makedirs(path)
+            print_with_status(f"Created directory: {d}", status_icon="📁")
+
+    # 2. Initialize default config
+    config_path = os.path.join(project_root, ".lisa", "config.yaml")
+    if not os.path.exists(config_path):
+        default_config = """# LISA Project Configuration
+# Epic 9: Standardized Repository Bootstrapping
+
+strictness: strict
+spike_mode_allowed: true
+context_limit: 200000
+turn_limit: 25
+skill_base_path: ".lisa/skills"
+installation_type: "resident"
+
+# Life Cycle Hooks
+lifecycle_hooks:
+  story-kickoff: []
+  story-in-dev: ["lisa turns"]
+  story-test: ["lisa refactor"]
+  story-complete: ["lisa polish"]
+  context-reset: ["lisa checkpoint"]
+"""
+        with open(config_path, "w") as f:
+            f.write(default_config)
+        print_with_status("Initialized default config: .lisa/config.yaml", status_icon="⚙️")
+
+    # 3. Copy skill instructions
+    skills_to_map = {
+        "polish-pass/skill.md": "polish.md",
+        "refactor-gate/skill.md": "refactor.md",
+        "ui-handoff/skill.md": "ui-handoff.md"
+    }
+    dest_skills_dir = os.path.join(project_root, ".lisa", "skills")
+    
+    for src_rel, dst_name in skills_to_map.items():
+        src = os.path.join(_SKILL_BASE, src_rel)
+        dst = os.path.join(dest_skills_dir, dst_name)
+        
+        if os.path.exists(src) and not os.path.exists(dst):
+            shutil.copy2(src, dst)
+            print_with_status(f"Copied core skill: {dst_name}", status_icon="📜")
+
+    # 4. Copy lisa.sh as the resident bridge
+    lisa_sh_src = os.path.join(os.path.dirname(__file__), "lisa.sh")
+    lisa_sh_dst = os.path.join(project_root, ".lisa", "lisa.sh")
+    if os.path.exists(lisa_sh_src):
+        try:
+            shutil.copy2(lisa_sh_src, lisa_sh_dst)
+            os.chmod(lisa_sh_dst, 0o755)
+            print_with_status("Created resident bridge: .lisa/lisa.sh", status_icon="🌉")
+        except Exception as e:
+            print_with_status(f"[WARNING] Could not create resident bridge: {e}", status_icon="⚠️")
+
+    # 5. Inject git hooks
+    git_dir = os.path.join(project_root, ".git")
+    if os.path.isdir(git_dir):
+        hooks_dir = os.path.join(git_dir, "hooks")
+        # Use relative path in hooks so they are portable within the repo
+        _install_git_hook(hooks_dir, "post-commit", ".lisa/lisa.sh hooks story-in-dev")
+        _install_git_hook(hooks_dir, "pre-push", ".lisa/lisa.sh hooks story-test")
+
+    print("---------------------------------------------------")
+    print_with_status("Installation Complete. Activating...", status_icon="✅")
+    
+    # Run status to confirm
+    return status_cmd([])
 
 
 def _init_fix(project_root):
@@ -569,23 +710,81 @@ def context_status(args):
     Reports the current activity of the context system.
     Usage: lisa context status
     """
+    return status_cmd(args)
+
+def status_cmd(args):
+    """
+    Unified Status & Activity Reporting.
+    Usage: lisa status
+    """
     try:
         project_root = find_project_root(os.getcwd())
     except FileNotFoundError:
-        print_with_status("Error: Could not determine project root.", status_icon="🔴")
-        return 1
+        print_with_status("LISA is Inactive (Not a LISA project)", status_icon="⚪")
+        return 0
 
     state_manager = StateManager(project_root=project_root)
     state_manager.warn_if_fallback()
     state = state_manager.load()
-    activity = state.get("activity", "unknown")
     
-    # Capitalize for display
-    display_activity = activity.capitalize() if activity else "Unknown"
+    activity = state.get("activity", ContextActivity.IDLE)
+    mode = state.get("mode", LISA_MODES.NORMAL)
+    turn_count = state.get("turn_count", 0)
     
-    print_with_status("Context System Status")
-    print("---------------------")
-    print_with_status(f"Current Activity: {display_activity}", status_icon="ℹ️")
+    # Activity mapping
+    activity_map = {
+        ContextActivity.IDLE: "Idle / Ready",
+        ContextActivity.ACTIVE: "Idle / Ready",
+        ContextActivity.MONITORING: "Actively Monitoring",
+        ContextActivity.ARCHIVING: "Context Archiving",
+        ContextActivity.COMPACTING: "Context Compacting",
+        ContextActivity.CHECKPOINTING: "Saving Checkpoint",
+        ContextActivity.RESETTING: "Resetting Session",
+        ContextActivity.VERIFYING: "Verification Gate Active"
+    }
+    
+    display_activity = activity_map.get(activity, f"Unknown ({activity})")
+    
+    # Token estimation (optional AC)
+    health_icon = get_cached_health_icon()
+    
+    print_with_status("LISA Operational Status")
+    print("---------------------------------------------------")
+    print_with_status(f"Activity: {display_activity}", status_icon="📡")
+    print_with_status(f"Mode:     {mode}", status_icon="🛡️")
+    print_with_status(f"Turn:     {turn_count}", status_icon="🔢")
+    
+    # Show health preview if available
+    config = ConfigManager(project_root=project_root).load()
+    limit = config.get("context_limit", 160000)
+    cache = get_cache_status(limit)
+    if cache:
+        tokens = cache.get("total_tokens", 0)
+        print_with_status(f"Context:  ~{tokens} tokens {health_icon}", status_icon="🧠")
+    
+    return 0
+
+def activate_cmd(args):
+    """
+    Explicitly activates LISA monitoring for the current project.
+    Usage: lisa activate
+    """
+    try:
+        project_root = find_project_root(os.getcwd())
+    except FileNotFoundError:
+        print_with_status("Error: Could not determine project root. Run 'lisa init' first.", status_icon="🔴")
+        return 1
+
+    state_manager = StateManager(project_root=project_root)
+    state_manager.warn_if_fallback()
+    
+    # Set to monitoring
+    state_manager.update("activity", ContextActivity.MONITORING)
+    
+    print_with_status("LISA Activated", status_icon="🚀")
+    print_with_status("Safety Harness Engaged — Actively Monitoring context health.", status_icon="🛡️")
+    print_with_status("Use 'lisa status' to verify operational state.", status_icon="ℹ️")
+    
     return 0
 
 def workspace_size(args):
@@ -723,8 +922,10 @@ def polish(args):
     except FileNotFoundError:
         print_with_status("Error: Could not determine project root.", status_icon="🔴")
         return 1
+    except Exception:
+        project_root = None
 
-    skill_path = os.path.join(_SKILL_BASE, "polish-pass", "skill.md")
+    skill_path = resolve_skill_path(project_root, "polish.md", "polish-pass/skill.md")
 
     if not os.path.exists(skill_path):
         print_with_status(f"Error: Polish Pass skill not found at {skill_path}", status_icon="🔴")
@@ -756,8 +957,10 @@ def refactor(args):
     except FileNotFoundError:
         print_with_status("Error: Could not determine project root.", status_icon="🔴")
         return 1
+    except Exception:
+        project_root = None
 
-    skill_path = os.path.join(_SKILL_BASE, "refactor-gate", "skill.md")
+    skill_path = resolve_skill_path(project_root, "refactor.md", "refactor-gate/skill.md")
 
     if not os.path.exists(skill_path):
         print_with_status(f"Error: Refactor Gate skill not found at {skill_path}", status_icon="🔴")
@@ -1184,8 +1387,9 @@ def ui_handoff(args):
         )
         return 1
 
-    # Check skill file exists
-    skill_path = os.path.join(_SKILL_BASE, "ui-handoff", "skill.md")
+    # Skill resolution
+    skill_path = resolve_skill_path(project_root, "ui-handoff.md", "ui-handoff/skill.md")
+
     if not os.path.exists(skill_path):
         print_with_status(
             f"Error: UI Handoff skill not found at {skill_path}",

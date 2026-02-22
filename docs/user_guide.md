@@ -4,82 +4,105 @@ This guide provides detailed instructions on how to use LISA (Layered Isolated S
 
 ## Installation
 
-LISA is designed as a zero-dependency drop-in tool. It installs under `.agent/lisa/`, separate from your project's own source code.
+LISA is designed to be a zero-dependency drop-in tool. Because LISA is not currently distributed via package managers like pip, you must clone the source code to use it in a new project.
 
-### Prerequisites
+### Global Installation (Recommended)
 
-- Python 3.8+ installed and available as `python3` in your PATH.
-- A POSIX-compliant shell (Bash/Zsh).
+Install LISA once and use it across all projects. This is the easiest way to use LISA across multiple blank projects.
 
-### Project Installation (Recommended)
-
-Install LISA into a single project, versioned with the repository so the whole team gets it via git.
-
-1. **Copy files:**
-
-    ```bash
-    mkdir -p .agent
-    cp -r <lisa-source> .agent/lisa
-    chmod +x .agent/lisa/lisa.sh
-    ```
-
-2. **Install dependencies:**
-
-    ```bash
-    pip install tiktoken
-    ```
-
-    If using a virtual environment, activate it first or use the venv's pip directly (e.g., `.venv/bin/pip install tiktoken`). Without tiktoken, LISA falls back to `characters/4` as a token estimate.
-
-3. **Set up an alias** (recommended):
-
-    ```bash
-    alias lisa='./.agent/lisa/lisa.sh'
-    ```
-
-    Add this to your shell profile (`.bashrc`, `.zshrc`) or a project-level `.envrc`.
-
-4. **Verify installation:**
-
-    ```bash
-    lisa version
-    ```
-
-    This confirms the shell-to-Python handoff, displays the detected project root, Python version, and whether tiktoken is available.
-
-### Global Installation
-
-Install LISA once and use it across all projects. Useful for personal workflows where you don't need LISA checked into each repo.
-
-1. **Copy files to a global location:**
+1. **Clone the repository to a global location:**
 
     ```bash
     mkdir -p ~/.agent
-    cp -r <lisa-source> ~/.agent/lisa
-    chmod +x ~/.agent/lisa/lisa.sh
+    git clone https://github.com/dutchdutchdutch/lisa.git ~/.agent/lisa
     ```
 
-2. **Add to PATH or create a global alias:**
+2. **Create a global alias:**
+
+    Add this to your shell profile (`~/.bashrc`, `~/.zshrc`):
 
     ```bash
-    alias lisa='~/.agent/lisa/lisa.sh'
+    alias lisa='~/.agent/lisa/src/lisa/lisa.sh'
+    ```
+    
+    *Remember to reload your shell profile (e.g., `source ~/.zshrc`) after adding the alias.*
+
+3. **Initialize and Setup in your project:**
+
+    Navigate to your blank project directory and run:
+
+    ```bash
+    cd my-blank-project
+    lisa init --setup
     ```
 
-    Add this to your shell profile (`.bashrc`, `.zshrc`).
+    This command will:
+    - Create `.lisa/`, `.lisa/skills/`, and `.lisa/archive/`.
+    - Create a default `.lisa/config.yaml`.
+    - Copy core skills (Polish Pass, Refactor Gate, UI Handoff) to `.lisa/skills/`.
+    - **Automated Hook Activation**: Copy a resident bridge script (`.lisa/lisa.sh`) and inject git hooks into `.git/hooks/` (post-commit and pre-push) that call LISA automatically.
 
-3. **Install dependencies:**
+4. **Install dependencies:**
 
     ```bash
     pip install tiktoken
     ```
 
-4. **Verify installation:**
+    If using a virtual environment, activate it first. Without tiktoken, LISA falls back to a character-based token estimate.
+
+5. **Verify installation:**
 
     ```bash
     lisa version
     ```
 
 > **Note:** With global installation, LISA discovers the project root dynamically by walking up from the current directory to find `.git/`. Per-project configuration (`.lisa/config.json`) still lives in each project root.
+
+### Local Project Installation
+
+If you prefer to set up LISA contained entirely within a single project (for example, to ensure all teammates use the same version without global setup):
+
+1. **Clone LISA into your project:**
+
+    ```bash
+    # Inside your blank project root
+    mkdir -p .agent
+    git clone https://github.com/dutchdutchdutch/lisa.git .agent/lisa
+    ```
+
+2. **Set up a local alias:**
+
+    ```bash
+    alias lisa='./.agent/lisa/src/lisa/lisa.sh'
+    ```
+
+3. **Initialize and Setup:**
+
+    ```bash
+    lisa init --setup
+    ```
+
+4. **Install dependencies:**
+
+    ```bash
+    pip install tiktoken
+    ```
+
+### Manual Installation (Backup)
+
+If you prefer to set up LISA manually or are in an environment where the installer isn't suitable, follow these steps:
+
+1. **Copy files:**
+
+    ```bash
+    # Assuming you have the LISA source somewhere
+    mkdir -p .lisa/skills
+    cp -r <lisa-source>/skills/* .lisa/skills/
+    ```
+
+2. **Create config**: Create a `.lisa/config.yaml` with your project settings.
+
+3. **Bridge script**: Copy the `lisa.sh` script to your project root or `.lisa/` and make it executable.
 
 ### Directory Layout
 
@@ -136,10 +159,11 @@ LISA uses a hierarchical configuration system.
 |-----|---------|-------------|
 | `strictness` | `"strict"` | TDD enforcement level |
 | `spike_mode_allowed` | `true` | Whether spike mode is permitted |
-| `context_limit` | `100000` | Workspace token budget — the point where an agent should be selective about file loading |
-| `context_check_interval` | `600` | Seconds between lazy context checks |
-| `hooks_mode` | `"auto"` | `"auto"` runs remediation automatically; `"interactive"` prompts first |
-| `scan_ignores` | `[]` | Additional directories/files to exclude from workspace scans (extends built-in defaults) |
+| `context_limit` | `200000` | Workspace token budget |
+| `turn_limit` | `20` | Turn count for RED status |
+| `turn_warning_threshold` | `12` | Turn count for AMBER status |
+| `skill_base_path` | `".lisa/skills"` | Path to skill instructions (supports `{project-root}`) |
+| `hooks_mode` | `"auto"` | Remediation mode |
 | `lifecycle_hooks` | (see above) | Map of lifecycle events to LISA commands |
 
 > **Note:** `context_limit` is a **workspace size budget** (files on disk), not a model context window limit. The default of 100,000 tokens is roughly where an agent needs to be disciplined about selective file loading. Adjust based on your project size. For context window pressure signals, see `lisa context health` which uses turn-based metrics.
@@ -354,7 +378,7 @@ lisa refactor
 
 ### `lisa hooks <event>`
 
-**Purpose**: Triggers lifecycle hooks for a given event. Hooks are configured in `.lisa/config.json` and execute LISA commands at key story lifecycle boundaries.
+**Purpose**: Triggers lifecycle hooks for a given event. Hooks are configured in `.lisa/config.yaml` and execute LISA commands at key story lifecycle boundaries.
 
 **Usage**:
 
@@ -362,15 +386,20 @@ lisa refactor
 lisa hooks story-complete
 ```
 
+**Automated Git Integration**: 
+When initialized with `lisa init --setup`, LISA automatically installs git hooks that call these lifecycle events:
+- **`post-commit`**: Calls `hooks story-in-dev` to track turns and check health after every commit.
+- **`pre-push`**: Calls `hooks story-test` to ensure the Refactor Gate passes before pushing code.
+
 **Valid Events:**
 
 | Event | Default Hook | Description |
 |-------|-------------|-------------|
 | `story-kickoff` | (none) | When a story starts |
-| `story-in-dev` | `lisa turns` | Each development turn (turn auto-tracked) |
-| `story-test` | `lisa refactor` | After green phase (Refactor Gate). When scope is set, uses scoped layer verification with deferral and progression gates. |
-| `story-complete` | `lisa polish` | Story marked complete (also runs health + remediation). Polish regression gate uses scoped verification when scope is set. |
-| `context-reset` | `lisa checkpoint` | After context reset. Scope is archived and cleared. |
+| `story-in-dev` | `lisa turns` | Each development turn. Automatically triggered by `post-commit` git hook. |
+| `story-test` | `lisa refactor` | After green phase. Automatically triggered by `pre-push` git hook. |
+| `story-complete` | `lisa polish` | Story marked complete. Runs polish + health check. |
+| `context-reset` | `lisa checkpoint` | After context reset. Archives and clears scope state. |
 
 *   **`story-complete`** uses a special orchestrator: runs polish, context health check, and conditional remediation (context-curator, externalizer, session-management) based on health status. Also fires automatically when `lisa verify-layer` marks all layers (UNIT + INTEGRATION) as CLEAN.
 *   **Scope-aware verification:** When scope is set (`lisa scope`), both the Refactor Gate and Polish Pass use `lisa verify-layer` instead of manual impact analysis or full regression. Scope presence acts as an implicit mode switch — no configuration needed.

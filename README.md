@@ -25,34 +25,62 @@ The Externalizer skill in particular has no Claude Code equivalent. It addresses
 
 ## Installation
 
-Copy the LISA directory into your project and install dependencies:
+LISA is designed to be a zero-dependency drop-in tool. To use LISA in a new, blank project, you first need to bring the LISA source code into your environment.
+
+### Option 1: Global Installation (Recommended)
+
+Install LISA once and use it across all your projects.
 
 ```bash
-mkdir -p .agent
-cp -r <lisa-source> .agent/lisa
-chmod +x .agent/lisa/lisa.sh
+# 1. Clone the LISA repository to a central location
+mkdir -p ~/.agent
+git clone https://github.com/dutchdutchdutch/lisa.git ~/.agent/lisa
+
+# 2. Set up a global alias (add this to ~/.bashrc or ~/.zshrc)
+alias lisa='~/.agent/lisa/src/lisa/lisa.sh'
+
+# 3. Reload your shell profile
+source ~/.zshrc  # or ~/.bashrc
+
+# 4. Navigate to your blank project and initialize LISA
+cd my-blank-project
+lisa init --setup
+
+# 5. Install dependencies (tiktoken highly recommended for accurate counting)
 pip install tiktoken
 ```
 
-Verify installation:
+### Option 2: Local Project Installation
+
+If you prefer to keep LISA contained within a specific project:
 
 ```bash
-./.agent/lisa/lisa.sh version
+# 1. Inside your project, clone LISA into a hidden directory
+git clone https://github.com/dutchdutchdutch/lisa.git .agent/lisa
+
+# 2. Set up a local alias for convenience
+alias lisa='./.agent/lisa/src/lisa/lisa.sh'
+
+# 3. Initialize LISA
+lisa init --setup
+
+# 4. Install dependencies
+pip install tiktoken
 ```
 
-For global installation, per-project setup details, and virtual environment guidance, see the [User Guide](docs/user_guide.md#installation).
+Verify your installation:
+
+```bash
+lisa version
+```
+
+For advanced configuration and manual setups, see the [User Guide](docs/user_guide.md).
 
 ## Usage
 
 **For detailed command usage, please refer to the [User Guide](docs/user_guide.md).**
 
-Set up an alias for convenience (add to `.bashrc`/`.zshrc` or project `.envrc`):
-
-```bash
-alias lisa='./.agent/lisa/lisa.sh'
-```
-
-Then run LISA commands:
+Once your `lisa` alias is active, run LISA commands:
 
 ```bash
 lisa [command]
@@ -65,12 +93,12 @@ LISA monitors along common story or task lifecycle stages. Each stage can trigge
 | Stage | Default Hook / Skill | Description |
 |-------|---------------------|-------------|
 | **`story-kickoff`** | *(none)* | Story begins. Configurable entry point for initializing context or loading state. |
-| **`story-in-dev`** | `lisa turns` → **Turn Watchdog** | Each development turn. Tracks reasoning cycles; fires drift warnings at turn 12 (Goldfish Threshold) and compaction alerts at turn 20+. |
-| **`story-test`** | **Refactor Gate** | Tests are green. Runs a structured refactor loop — improve code quality without changing behavior, then verify impact. When scope is set, uses `lisa verify-layer` for scoped layer verification with deferral and progression gates. Otherwise falls back to manual impact analysis via `lisa analyze`. |
-| **`story-complete`** · Step 1 | `lisa polish` → **Polish Pass** | Runs a multi-phase quality scan: duplicate code, naming audit, error handling gaps, magic values, and performance/security review. Regression gate uses scoped layer verification when scope is set, full regression otherwise. |
+| **`story-in-dev`** | `lisa turns` → **Turn Watchdog** | Each development turn. Automatically triggered by the **`post-commit`** git hook. Tracks reasoning cycles; fires drift warnings at turn 12 (Goldfish Threshold) and compaction alerts at turn 20+. |
+| **`story-test`** | **Refactor Gate** | Tests are green. Automatically triggered by the **`pre-push`** git hook. Runs a structured refactor loop — improve code quality without changing behavior, then verify impact. When scope is set, uses `lisa verify-layer` for scoped layer verification. |
+| **`story-complete`** · Step 1 | `lisa polish` → **Polish Pass** | Runs a multi-phase quality scan: duplicate code, naming audit, error handling gaps, magic values, and performance/security review. |
 | **`story-complete`** · Step 2 | `lisa context` → **Context Health Check** | Measures token usage via **tiktoken** against your configured limit. Reports a traffic light (🟢🟡🔴) plus turn-count drift analysis. |
-| **`story-complete`** · Step 3 | Auto-remediation (if 🟡 or 🔴) | **Context Curator** — compress and summarize conversation history. **Checkpoint** — pin critical state to `todo.md`. **Session Management** — recommend `lisa reset` to archive and start fresh when context is saturated. |
-| **`context-reset`** | `lisa checkpoint` → **Checkpoint** | After `lisa reset`. Archives and clears scope state, validates that the external state artifact (`todo.md`) exists and is fresh. |
+| **`story-complete`** · Step 3 | Auto-remediation (if 🟡 or 🔴) | **Context Curator** — compress and summarize conversation history. **Checkpoint** — pin critical state to `todo.md`. |
+| **`context-reset`** | `lisa checkpoint` → **Checkpoint** | After `lisa reset`. Archives and clears scope state, validates that the external state artifact exists and is fresh. |
 
 > Hooks are configurable via `lifecycle_hooks` in `.lisa/config.json`. All hooks are **fail-open** — failures log warnings but never block workflow.
 

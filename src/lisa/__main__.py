@@ -4,7 +4,7 @@ from .commands import (
     bypass_tdd, check_context, reset_context, checkpoint, init_session,
     context_status, context_size, context_health, run_hooks_cmd,
     turns, polish, refactor, classify, scope_cmd, verify_layer, layer_status_cmd,
-    ui_handoff, workspace_size,
+    ui_handoff, workspace_size, status_cmd, activate_cmd,
 )
 from .config import ConfigManager
 from .state import StateManager
@@ -20,7 +20,7 @@ def main():
     args = sys.argv[2:]
 
     # Commands that work without a project root (smoke test)
-    if command == "version":
+    if command in ("--version", "-v", "version"):
         print("0.3.0")
         sys.exit(0)
 
@@ -80,6 +80,10 @@ def main():
         sys.exit(ui_handoff(args))
     elif command == "workspace":
         sys.exit(workspace_size(args))
+    elif command == "status":
+        sys.exit(status_cmd(args))
+    elif command == "activate":
+        sys.exit(activate_cmd(args))
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)

@@ -14,12 +14,14 @@ class LISA_MODES:
     BYPASS_TDD = "BYPASS_TDD"
 
 class ContextActivity:
+    IDLE = "idle"
     ACTIVE = "active"
     MONITORING = "monitoring"
     COMPACTING = "compacting"
     CHECKPOINTING = "checkpointing"
     RESETTING = "resetting"
     ARCHIVING = "archiving"
+    VERIFYING = "verifying"
 
 class StateManager:
     _fallback_warned = set()  # Once-per-process warning per project root
@@ -73,7 +75,7 @@ class StateManager:
             "taskId": "none",
             "status": "GREEN",
             "mode": LISA_MODES.NORMAL,
-            "activity": "active",
+            "activity": ContextActivity.IDLE,
             "lastUpdated": time.time()
         }
 

@@ -136,7 +136,7 @@ def update_cache(token_count, health):
     except (IOError, OSError):
         pass # Fail silently (stats only)
 
-def get_cache_status(limit, interval=None):
+def get_cache_status(limit=None, interval=None):
     """
     Checks cache validity and returns (token_count, health) if valid, else (None, None).
     Helper to avoid config duplication.
